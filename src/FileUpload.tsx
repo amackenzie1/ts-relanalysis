@@ -1,101 +1,98 @@
-import React, { useState } from 'react'
-import WordCloud from 'react-d3-cloud'
+// src/ChatAnalysis.tsx
+
+import React, { useState } from 'react';
+import WordCloud from 'react-d3-cloud';
+import BarChart from './components/BarChart'; // Import the BarChart component
 
 interface AnalysisResult {
-  person1: string
-  person2: string
-  topWords1: { text: string; value: number }[]
-  topWords2: { text: string; value: number }[]
+  person1: string;
+  person2: string;
+  topWords1: { text: string; value: number }[];
+  topWords2: { text: string; value: number }[];
 }
 
 const LIMIT = 100;
 
 const ChatAnalysis: React.FC = () => {
-  const [results, setResults] = useState<AnalysisResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [results, setResults] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const analyzeText = (content: string): AnalysisResult => {
-    const lines = content.split('\n')
-    const names = new Set<string>()
-    const wordRegex = /\b\w+\b/gi
+    const lines = content.split('\n');
+    const names = new Set<string>();
+    const wordRegex = /\b\w+\b/gi;
 
     lines.forEach((line) => {
-      const match = line.match(/\] (.+?):/)
-      if (match) names.add(match[1])
-    })
+      const match = line.match(/\] (.+?):/);
+      if (match) names.add(match[1]);
+    });
 
     if (names.size < 2) {
-      throw new Error('Could not identify two distinct persons in the chat')
+      throw new Error('Could not identify two distinct persons in the chat');
     }
 
-    const [person1, person2] = Array.from(names)
-    const words1: string[] = [],
-      words2: string[] = []
+    const [person1, person2] = Array.from(names);
+    const words1: string[] = [];
+    const words2: string[] = [];
 
     lines.forEach((line) => {
-      const match = line.match(/\] (.+?): (.+)/)
+      const match = line.match(/\] (.+?): (.+)/);
       if (match) {
-        const [, name, message] = match
-        const extractedWords = message.toLowerCase().match(wordRegex) || []
+        const [, name, message] = match;
+        const extractedWords = message.toLowerCase().match(wordRegex) || [];
         if (name === person1) {
-          words1.push(...extractedWords)
+          words1.push(...extractedWords);
         } else if (name === person2) {
-          words2.push(...extractedWords)
+          words2.push(...extractedWords);
         }
       }
-    })
+    });
 
     const count1 = words1.reduce(
       (acc, word) => ({ ...acc, [word]: (acc[word] || 0) + 1 }),
       {} as Record<string, number>
-    )
+    );
     const count2 = words2.reduce(
       (acc, word) => ({ ...acc, [word]: (acc[word] || 0) + 1 }),
       {} as Record<string, number>
-    )
+    );
 
-    const allWords = new Set([...Object.keys(count1), ...Object.keys(count2)])
-    const ratios: Record<string, number> = {}
+    const allWords = new Set([...Object.keys(count1), ...Object.keys(count2)]);
+    const ratios: Record<string, number> = {};
 
     allWords.forEach((word) => {
-      const c1 = count1[word] || 0
-      const c2 = count2[word] || 0
-      ratios[word] = (c1 + 1) / (c2 + 1)
-    })
+      const c1 = count1[word] || 0;
+      const c2 = count2[word] || 0;
+      ratios[word] = (c1 + 1) / (c2 + 1);
+    });
 
-    const sortedRatios = Object.entries(ratios).sort((a, b) => b[1] - a[1])
-    const topWords1 = sortedRatios
-      .slice(0, LIMIT)
-      .map(([text, value]) => ({ text, value }))
-    const topWords2 = sortedRatios
-      .slice(-LIMIT)
-      .reverse()
-      .map(([text, value]) => ({ text, value: 1 / value }))
+    const sortedRatios = Object.entries(ratios).sort((a, b) => b[1] - a[1]);
+    const topWords1 = sortedRatios.slice(0, LIMIT).map(([text, value]) => ({ text, value }));
+    const topWords2 = sortedRatios.slice(-LIMIT).reverse().map(([text, value]) => ({ text, value: 1 / value }));
 
-    return { person1, person2, topWords1, topWords2 }
-  }
+    return { person1, person2, topWords1, topWords2 };
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = (e: ProgressEvent<FileReader>) => {
       try {
-        const content = e.target?.result as string
-        const result = analyzeText(content)
-        setResults(result)
-        setError(null)
+        const content = e.target?.result as string;
+        const result = analyzeText(content);
+        setResults(result);
+        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err))
-        setResults(null)
+        setError(err instanceof Error ? err.message : String(err));
+        setResults(null);
       }
-    }
-    reader.readAsText(file)
-  }
+    };
+    reader.readAsText(file);
+  };
 
-  const fontSizeMapper = (word: { value: number }) =>
-    Math.log2(word.value) * 14 + 2
+  const fontSizeMapper = (word: { value: number }) => Math.log2(word.value) * 14 + 2;
 
   return (
     <div
@@ -106,9 +103,7 @@ const ChatAnalysis: React.FC = () => {
         padding: '20px',
       }}
     >
-      <h1 style={{ textAlign: 'center', color: '#333' }}>
-        Chat Analysis Word Cloud
-      </h1>
+      <h1 style={{ textAlign: 'center', color: '#333' }}>Chat Analysis Word Cloud</h1>
       <div
         style={{
           display: 'flex',
@@ -139,9 +134,7 @@ const ChatAnalysis: React.FC = () => {
             }}
           >
             <div style={{ width: '45%', minWidth: '300px', margin: '10px' }}>
-              <h3 style={{ textAlign: 'center', color: '#555' }}>
-                Top words for {results.person1}
-              </h3>
+              <h3 style={{ textAlign: 'center', color: '#555' }}>Top words for {results.person1}</h3>
               <div
                 style={{
                   width: '100%',
@@ -159,11 +152,15 @@ const ChatAnalysis: React.FC = () => {
                   padding={2}
                 />
               </div>
+              <BarChart
+                data={{
+                  labels: results.topWords1.map((word) => word.text),
+                  values: results.topWords1.map((word) => word.value),
+                }}
+              />
             </div>
             <div style={{ width: '45%', minWidth: '300px', margin: '10px' }}>
-              <h3 style={{ textAlign: 'center', color: '#555' }}>
-                Top words for {results.person2}
-              </h3>
+              <h3 style={{ textAlign: 'center', color: '#555' }}>Top words for {results.person2}</h3>
               <div
                 style={{
                   width: '100%',
@@ -181,12 +178,18 @@ const ChatAnalysis: React.FC = () => {
                   padding={2}
                 />
               </div>
+              <BarChart
+                data={{
+                  labels: results.topWords2.map((word) => word.text),
+                  values: results.topWords2.map((word) => word.value),
+                }}
+              />
             </div>
           </div>
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default ChatAnalysis
+export default ChatAnalysis;

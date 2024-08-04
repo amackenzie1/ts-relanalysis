@@ -1,10 +1,11 @@
+// src/App.tsx
+
 import React from 'react';
-import FileUpload from './FileUpload';
+import FileUpload from './components/FileUpload';
 
 const App: React.FC = () => {
   return (
-    <div className="App">
-      <h1>Text File Upload</h1>
+    <div>
       <FileUpload />
     </div>
   );
