@@ -10,20 +10,18 @@ import {
   Legend,
 } from 'chart.js';
 
-// Register necessary Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface SentimentAnalysisProps {
   data: { week: string; sentiment: number }[];
-  person: string;
 }
 
-const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ data, person }) => {
+const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ data }) => {
   const chartOptions = {
     responsive: true,
     scales: {
       x: {
-        type: 'category' as const, // Use a constant type for category scale
+        type: 'category' as const,
         title: {
           display: true,
           text: 'Week',
@@ -44,7 +42,7 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ data, person }) =
       },
       title: {
         display: true,
-        text: `Weekly Sentiment Score for ${person}`,
+        text: 'Weekly Sentiment Score',
       },
     },
   };
@@ -61,16 +59,8 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ data, person }) =
   };
 
   return (
-    <div>
-      <h2 style={{ textAlign: 'center', color: '#333' }}>Weekly Sentiment Analysis for {person}</h2>
-      {data.length > 0 ? (
-        <div>
-          <h3 style={{ textAlign: 'center', color: '#444' }}>Sentiment by Week</h3>
-          <Bar data={chartData} options={chartOptions} />
-        </div>
-      ) : (
-        <p>No sentiment data available.</p>
-      )}
+    <div className="sentiment-chart">
+      <Bar data={chartData} options={chartOptions} />
     </div>
   );
 };

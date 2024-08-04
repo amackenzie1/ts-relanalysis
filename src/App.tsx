@@ -10,29 +10,33 @@ interface AnalysisResult {
   person2: string;
   topWords1: { text: string; value: number }[];
   topWords2: { text: string; value: number }[];
-  sentiment1: { week: string; sentiment: number }[];
-  sentiment2: { week: string; sentiment: number }[];
 }
 
 const App: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [sentimentData, setSentimentData] = useState<{ week: string; sentiment: number }[]>([]);
 
   const handleAnalysisResults = (result: AnalysisResult) => {
-    console.log('Analysis Result:', result); // Debug: Check the data here
+    console.log('Analysis Result:', result);
     setAnalysisResult(result);
+  };
+
+  const handleSentimentData = (data: { week: string; sentiment: number }[]) => {
+    console.log('Sentiment Data:', data);
+    setSentimentData(data);
   };
 
   return (
     <div className="app-container">
       {!analysisResult ? (
-        // Centered File Upload component
         <div className="file-upload-centered">
-          <FileUpload onAnalysisComplete={handleAnalysisResults} />
+          <FileUpload 
+            onAnalysisComplete={handleAnalysisResults} 
+            onSentimentAnalysisComplete={handleSentimentData}
+          />
         </div>
       ) : (
-        // Dashboard Grid Layout
         <div className="dashboard-grid">
-          {/* Row 1: Word Clouds for both persons */}
           <div className="segment word-cloud">
             <h3 className="segment-title">{`Word Cloud for ${analysisResult.person1}`}</h3>
             <WordCloudComponent
@@ -50,7 +54,6 @@ const App: React.FC = () => {
             />
           </div>
 
-          {/* Row 2: Bar Charts for both persons */}
           <div className="segment bar-chart">
             <h3 className="segment-title">{`Bar Chart for ${analysisResult.person1}`}</h3>
             <BarChart
@@ -70,30 +73,17 @@ const App: React.FC = () => {
             />
           </div>
 
-          {/* Row 3: Sentiment Analysis for both persons */}
           <div className="segment sentiment-analysis">
-            <h3 className="segment-title">{`Sentiment Analysis for ${analysisResult.person1}`}</h3>
-            <SentimentAnalysis
-              data={analysisResult.sentiment1} // Pass sentiment data
-              person={analysisResult.person1}  // Pass person's name
-            />
-          </div>
-          <div className="segment sentiment-analysis">
-            <h3 className="segment-title">{`Sentiment Analysis for ${analysisResult.person2}`}</h3>
-            <SentimentAnalysis
-              data={analysisResult.sentiment2} // Pass sentiment data
-              person={analysisResult.person2}  // Pass person's name
-            />
-          </div>
-
-          {/* Optional Row 4: Placeholder Boxes or Additional Components */}
-          <div className="segment placeholder">
-            <h3 className="segment-title">Additional Analysis 1</h3>
-            <p>Content for additional analysis or metrics</p>
+            <h3 className="segment-title">Cumulative Sentiment Analysis</h3>
+            {sentimentData.length > 0 ? (
+              <SentimentAnalysis data={sentimentData} />
+            ) : (
+              <p>No sentiment data available</p>
+            )}
           </div>
           <div className="segment placeholder">
-            <h3 className="segment-title">Additional Analysis 2</h3>
-            <p>Content for additional analysis or metrics</p>
+            <h3 className="segment-title">Additional Analysis</h3>
+            <p>Space for future analysis components</p>
           </div>
         </div>
       )}
