@@ -1,18 +1,23 @@
-// src/components/FileUpload.tsx
-
 import React, { useState } from 'react';
 import WordCloudComponent from './WordCloudComponent';
 import BarChart from './BarChart';
 import { analyzeText } from '../utils/textAnalysis';
 
+// Define the interface for the analysis result
 interface AnalysisResult {
   person1: string;
   person2: string;
   topWords1: { text: string; value: number }[];
   topWords2: { text: string; value: number }[];
+  sentiment1: { week: string; sentiment: number }[];
+  sentiment2: { week: string; sentiment: number }[];
 }
 
-const FileUpload: React.FC = () => {
+interface FileUploadProps {
+  onAnalysisComplete: (result: AnalysisResult) => void;
+}
+
+const FileUpload: React.FC<FileUploadProps> = ({ onAnalysisComplete }) => {
   const [results, setResults] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,8 +30,9 @@ const FileUpload: React.FC = () => {
       try {
         const content = e.target?.result as string;
         const result = analyzeText(content);
-        setResults(result);
+        setResults(result); // No error here now
         setError(null);
+        onAnalysisComplete(result); // Pass the result to the parent component
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
         setResults(null);
