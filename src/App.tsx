@@ -32,56 +32,68 @@ const App: React.FC = () => {
       ) : (
         // Dashboard Grid Layout
         <div className="dashboard-grid">
-          {/* Column 1: Person 1 */}
-          <div className="column">
-            <h2 style={{ textAlign: 'center', color: '#333' }}>{`Analysis for ${analysisResult.person1}`}</h2>
-            <div className="segment word-cloud">
-              <WordCloudComponent
-                data={analysisResult.topWords1}
-                color="#007bff"
-                title={`Top words for ${analysisResult.person1}`}
-              />
-            </div>
-            <div className="segment bar-chart">
-              <BarChart
-                data={{
-                  labels: analysisResult.topWords1.map((word) => word.text),
-                  values: analysisResult.topWords1.map((word) => word.value),
-                }}
-              />
-            </div>
-            <div className="segment sentiment-analysis">
-              <SentimentAnalysis
-                data={analysisResult.sentiment1} // Pass sentiment data
-                person={analysisResult.person1}  // Pass person's name
-              />
-            </div>
+          {/* Row 1: Word Clouds for both persons */}
+          <div className="segment word-cloud">
+            <h3 className="segment-title">{`Word Cloud for ${analysisResult.person1}`}</h3>
+            <WordCloudComponent
+              data={analysisResult.topWords1}
+              color="#007bff"
+              title={`Top words for ${analysisResult.person1}`}
+            />
+          </div>
+          <div className="segment word-cloud">
+            <h3 className="segment-title">{`Word Cloud for ${analysisResult.person2}`}</h3>
+            <WordCloudComponent
+              data={analysisResult.topWords2}
+              color="#28a745"
+              title={`Top words for ${analysisResult.person2}`}
+            />
           </div>
 
-          {/* Column 2: Person 2 */}
-          <div className="column">
-            <h2 style={{ textAlign: 'center', color: '#333' }}>{`Analysis for ${analysisResult.person2}`}</h2>
-            <div className="segment word-cloud">
-              <WordCloudComponent
-                data={analysisResult.topWords2}
-                color="#28a745"
-                title={`Top words for ${analysisResult.person2}`}
-              />
-            </div>
-            <div className="segment bar-chart">
-              <BarChart
-                data={{
-                  labels: analysisResult.topWords2.map((word) => word.text),
-                  values: analysisResult.topWords2.map((word) => word.value),
-                }}
-              />
-            </div>
-            <div className="segment sentiment-analysis">
-              <SentimentAnalysis
-                data={analysisResult.sentiment2} // Pass sentiment data
-                person={analysisResult.person2}  // Pass person's name
-              />
-            </div>
+          {/* Row 2: Bar Charts for both persons */}
+          <div className="segment bar-chart">
+            <h3 className="segment-title">{`Bar Chart for ${analysisResult.person1}`}</h3>
+            <BarChart
+              data={{
+                labels: analysisResult.topWords1.map((word) => word.text),
+                values: analysisResult.topWords1.map((word) => word.value),
+              }}
+            />
+          </div>
+          <div className="segment bar-chart">
+            <h3 className="segment-title">{`Bar Chart for ${analysisResult.person2}`}</h3>
+            <BarChart
+              data={{
+                labels: analysisResult.topWords2.map((word) => word.text),
+                values: analysisResult.topWords2.map((word) => word.value),
+              }}
+            />
+          </div>
+
+          {/* Row 3: Sentiment Analysis for both persons */}
+          <div className="segment sentiment-analysis">
+            <h3 className="segment-title">{`Sentiment Analysis for ${analysisResult.person1}`}</h3>
+            <SentimentAnalysis
+              data={analysisResult.sentiment1} // Pass sentiment data
+              person={analysisResult.person1}  // Pass person's name
+            />
+          </div>
+          <div className="segment sentiment-analysis">
+            <h3 className="segment-title">{`Sentiment Analysis for ${analysisResult.person2}`}</h3>
+            <SentimentAnalysis
+              data={analysisResult.sentiment2} // Pass sentiment data
+              person={analysisResult.person2}  // Pass person's name
+            />
+          </div>
+
+          {/* Optional Row 4: Placeholder Boxes or Additional Components */}
+          <div className="segment placeholder">
+            <h3 className="segment-title">Additional Analysis 1</h3>
+            <p>Content for additional analysis or metrics</p>
+          </div>
+          <div className="segment placeholder">
+            <h3 className="segment-title">Additional Analysis 2</h3>
+            <p>Content for additional analysis or metrics</p>
           </div>
         </div>
       )}
