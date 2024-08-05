@@ -8,16 +8,21 @@ interface AnalysisResult {
   topWords2: { text: string; value: number }[]
 }
 
-const LIMIT = 100;
+const LIMIT = 100
 
 const ChatAnalysis: React.FC = () => {
   const [results, setResults] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const analyzeText = (content: string): AnalysisResult => {
-    const lines = content.split('\n')
+    let lines = content.split('\n')
     const names = new Set<string>()
-    const wordRegex = /\b\w+\b/gi
+    // get rid of all non-word or space characters, replace with nothing (NOT WITH SPACE)
+    const wordRegex = /\b[a-z']+(?:[-'][a-z]+)*\b/gi;
+    // if 'll' is in the line console.log the line 
+    lines.forEach((line) => 
+      {if (line.includes('ll')) console.log(line)}
+    )
 
     lines.forEach((line) => {
       const match = line.match(/\] (.+?):/)
@@ -29,13 +34,14 @@ const ChatAnalysis: React.FC = () => {
     }
 
     const [person1, person2] = Array.from(names)
-    const words1: string[] = [],
+    let words1: string[] = [],
       words2: string[] = []
 
     lines.forEach((line) => {
       const match = line.match(/\] (.+?): (.+)/)
       if (match) {
-        const [, name, message] = match
+        let [, name, message] = match
+        message = message.replace(/[^\w\s]/g, '')
         const extractedWords = message.toLowerCase().match(wordRegex) || []
         if (name === person1) {
           words1.push(...extractedWords)
@@ -44,6 +50,14 @@ const ChatAnalysis: React.FC = () => {
         }
       }
     })
+    // remove all words that contain a number 
+    words1 = words1.filter(word => !/\d/.test(word))
+    words2 = words2.filter(word => !/\d/.test(word))
+    // console.log all words that contain ll 
+    words1.forEach(word => {
+      if (word.includes('ll')) console.log(word)
+    })
+
 
     const count1 = words1.reduce(
       (acc, word) => ({ ...acc, [word]: (acc[word] || 0) + 1 }),
@@ -71,7 +85,8 @@ const ChatAnalysis: React.FC = () => {
       .slice(-LIMIT)
       .reverse()
       .map(([text, value]) => ({ text, value: 1 / value }))
-
+    
+    // normalize words1 and words2 so that the total sum of counts is 1
     return { person1, person2, topWords1, topWords2 }
   }
 

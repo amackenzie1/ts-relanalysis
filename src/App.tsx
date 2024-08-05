@@ -4,7 +4,6 @@ import FileUpload from './FileUpload';
 const App: React.FC = () => {
   return (
     <div className="App">
-      <h1>Text File Upload</h1>
       <FileUpload />
     </div>
   );
