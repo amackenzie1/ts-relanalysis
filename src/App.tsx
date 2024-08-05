@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import React, { useState } from 'react';
 import './App.css';
 import FileUpload from './components/FileUpload';
@@ -30,32 +32,34 @@ const App: React.FC = () => {
     <div className="app-container">
       {!analysisResult ? (
         <div className="file-upload-centered">
-          <FileUpload 
-            onAnalysisComplete={handleAnalysisResults} 
+          <FileUpload
+            onAnalysisComplete={handleAnalysisResults}
             onSentimentAnalysisComplete={handleSentimentData}
           />
         </div>
       ) : (
         <div className="dashboard-grid">
-          <div className="segment word-cloud">
-  <div>
-    <h3 className="segment-title">{`Word Cloud for ${analysisResult.person1}`}</h3>
-    <WordCloudComponent
-      data={analysisResult.topWords1}
-      color="#007bff"
-      title={`Top words for ${analysisResult.person1}`}
-    />
-  </div>
-  <div>
-    <h3 className="segment-title">{`Word Cloud for ${analysisResult.person2}`}</h3>
-    <WordCloudComponent
-      data={analysisResult.topWords2}
-      color="#28a745"
-      title={`Top words for ${analysisResult.person2}`}
-    />
-  </div>
-</div>
+          {/* Word Cloud Section */}
+          <div className="word-cloud-container">
+            <h3 className="word-cloud-title word-cloud-title-left">{`Word Cloud for ${analysisResult.person1}`}</h3>
+            <div className="word-cloud">
+              <WordCloudComponent
+                data={analysisResult.topWords1}
+                color="#007bff"
+                title={`Top words for ${analysisResult.person1}`}
+              />
+            </div>
+            <div className="word-cloud">
+              <WordCloudComponent
+                data={analysisResult.topWords2}
+                color="#28a745"
+                title={`Top words for ${analysisResult.person2}`}
+              />
+            </div>
+            <h3 className="word-cloud-title">{`Word Cloud for ${analysisResult.person2}`}</h3>
+          </div>
 
+          {/* Bar Chart Section */}
           <div className="segment bar-chart">
             <h3 className="segment-title">{`Bar Chart for ${analysisResult.person1}`}</h3>
             <BarChart
@@ -75,6 +79,7 @@ const App: React.FC = () => {
             />
           </div>
 
+          {/* Sentiment Analysis Section */}
           <div className="segment sentiment-analysis">
             <h3 className="segment-title">Cumulative Sentiment Analysis</h3>
             {sentimentData.length > 0 ? (
@@ -83,6 +88,8 @@ const App: React.FC = () => {
               <p>No sentiment data available</p>
             )}
           </div>
+
+          {/* Placeholder Section */}
           <div className="segment placeholder">
             <h3 className="segment-title">Additional Analysis</h3>
             <p>Space for future analysis components</p>
