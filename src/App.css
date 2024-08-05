@@ -93,6 +93,24 @@
   }
 }
 
+.sentiment-analysis {
+  grid-column: 1 / span 3;  /* Ensure it spans the full width */
+  grid-row: 3;  /* Keep it in the third row */
+  height: 400px;  /* Set a fixed height, or use min-height for flexibility */
+  /* min-height: 400px; */  /* Uncomment this and comment out height for a minimum height */
+  display: flex;
+  flex-direction: column;
+}
+
+.sentiment-analysis .segment-title {
+  margin-bottom: 10px;
+}
+
+.sentiment-analysis .sentiment-chart {
+  flex-grow: 1;  /* Allow the chart to fill the remaining space */
+  width: 100%;
+}
+
 @media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
