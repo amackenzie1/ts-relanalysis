@@ -38,21 +38,23 @@ const App: React.FC = () => {
       ) : (
         <div className="dashboard-grid">
           <div className="segment word-cloud">
-            <h3 className="segment-title">{`Word Cloud for ${analysisResult.person1}`}</h3>
-            <WordCloudComponent
-              data={analysisResult.topWords1}
-              color="#007bff"
-              title={`Top words for ${analysisResult.person1}`}
-            />
-          </div>
-          <div className="segment word-cloud">
-            <h3 className="segment-title">{`Word Cloud for ${analysisResult.person2}`}</h3>
-            <WordCloudComponent
-              data={analysisResult.topWords2}
-              color="#28a745"
-              title={`Top words for ${analysisResult.person2}`}
-            />
-          </div>
+  <div>
+    <h3 className="segment-title">{`Word Cloud for ${analysisResult.person1}`}</h3>
+    <WordCloudComponent
+      data={analysisResult.topWords1}
+      color="#007bff"
+      title={`Top words for ${analysisResult.person1}`}
+    />
+  </div>
+  <div>
+    <h3 className="segment-title">{`Word Cloud for ${analysisResult.person2}`}</h3>
+    <WordCloudComponent
+      data={analysisResult.topWords2}
+      color="#28a745"
+      title={`Top words for ${analysisResult.person2}`}
+    />
+  </div>
+</div>
 
           <div className="segment bar-chart">
             <h3 className="segment-title">{`Bar Chart for ${analysisResult.person1}`}</h3>

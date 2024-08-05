@@ -1,95 +1,84 @@
-/* App.css */
-
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .app-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-.file-upload-centered {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
 }
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* Three columns for layout */
-  grid-gap: 20px; /* Space between grid items */
-  justify-items: center;
-  align-items: start;
-}
-
-.column {
-  padding: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  background-color: #fff;
-  border-radius: 8px;
-  width: 100%;
-  max-width: 350px; /* Ensures components don't stretch too wide */
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 20px;
 }
 
 .segment {
-  margin-bottom: 20px;
+  background-color: #f0f0f0;
+  border-radius: 10px;
   padding: 15px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .word-cloud {
-  grid-column: span 2; /* Span two columns for wider word clouds */
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  background-color: transparent;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
-.bar-chart,
-.sentiment-analysis,
+.bar-chart:nth-of-type(1) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bar-chart:nth-of-type(2) {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.sentiment-analysis {
+  grid-column: 1;
+  grid-row: 2;
+}
+
 .placeholder {
-  grid-column: span 1; /* Each of these occupies one column */
+  grid-column: 3;
+  grid-row: 2;
 }
 
 .segment-title {
-  text-align: center;
-  color: #333;
   font-weight: bold;
   margin-bottom: 10px;
+  font-size: 1.2em;
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .word-cloud {
+    grid-column: 1 / span 2;
+    grid-row: 1;
+  }
+
+  .bar-chart, .sentiment-analysis, .placeholder {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .segment {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
 }
