@@ -85,6 +85,7 @@ def count_mbti_letters(mbti_list):
         for letter in mbti:
             if letter in letter_counts:
                 letter_counts[letter] += 1
+
     return letter_counts
 
 def is_significant_difference(count1, count2, alpha=0.05):
@@ -158,7 +159,7 @@ async def predict_mbti_from_chat(file_path, target_chunk_count=100):
     return final_predictions, predictions, letter_counts, significances, len(chunks)
 
 async def run_analysis():
-    chat_file_path = 'kai.txt'  # Replace with your actual file path
+    chat_file_path = '_chat.txt'  # Replace with your actual file path
     try:
         logger.info("Starting MBTI prediction process")
         final_predictions, all_predictions, letter_counts, significances, chunk_count = await predict_mbti_from_chat(chat_file_path)
