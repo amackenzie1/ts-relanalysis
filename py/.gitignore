@@ -1,4 +1,4 @@
-*hangouts*txt*
-*chat*txt*
+*txt*
+!requirements.txt
 __pycache__
 env/

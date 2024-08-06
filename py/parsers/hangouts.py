@@ -35,5 +35,6 @@ chat_text = """
 2020-01-06 13:26:26 <Andrew Mackenzie> We'll have to find a music store, do you know of any in NYC that have harps?
 """
 
-result = parse_hangouts(chat_text)
-print(result)
+if __name__ == "__main__":
+    result = parse_hangouts(chat_text)
+    print(result)

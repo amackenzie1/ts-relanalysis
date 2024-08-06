@@ -5,9 +5,10 @@ def parse_whatsapp(chat_text):
     lines = chat_text.strip().split('\n')
     parsed_data = []
     
-    pattern = r'\[(\d+/\d+/\d+, \d+:\d+:\d+ [AP]M)\] ([^:]+): (.+)'
+    pattern = r'\[(\d+/\d+/\d+, \d+:\d+:\d+.[AP]M)\] ([^:]+): (.+)'
     
     for line in lines:
+        print(line)
         match = re.match(pattern, line)
         if match:
             date_str, participant, message = match.groups()
@@ -34,5 +35,6 @@ Please reply "1" to confirm your booking or "9" to cancel. You can make other ch
 [8/1/24, 5:27:43 PM] Andrew: Awesome!
 """
 
-result = parse_whatsapp(chat_text)
-print(result)
+if __name__ == "__main__":
+    result = parse_whatsapp(chat_text)
+    print(result)

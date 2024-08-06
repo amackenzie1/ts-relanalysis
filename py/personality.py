@@ -15,8 +15,8 @@ from scipy.stats import binomtest
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-openai_api_key = ""
+# load from env 
+openai_api_key = os.getenv('OPENAI_API_KEY')
 
 def read_whatsapp_chat(file_path):
     logger.info(f"Reading WhatsApp chat from {file_path}")
@@ -29,6 +29,7 @@ def create_adaptive_chunks(messages, target_chunk_count=100):
     logger.info(f"Creating adaptive chunks with target count of {target_chunk_count}")
     start_time = time.time()
     total_messages = len(messages) 
+    print(f"Total: {total_messages}")
     chunk_size = math.ceil(total_messages / target_chunk_count)
     chunks = []
     
@@ -157,7 +158,7 @@ async def predict_mbti_from_chat(file_path, target_chunk_count=100):
     return final_predictions, predictions, letter_counts, significances, len(chunks)
 
 async def run_analysis():
-    chat_file_path = '_chat.txt'  # Replace with your actual file path
+    chat_file_path = 'kai.txt'  # Replace with your actual file path
     try:
         logger.info("Starting MBTI prediction process")
         final_predictions, all_predictions, letter_counts, significances, chunk_count = await predict_mbti_from_chat(chat_file_path)
