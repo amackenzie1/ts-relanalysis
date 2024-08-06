@@ -1,103 +1,121 @@
-// src/App.tsx
+import React, { useState } from 'react'
+import FileUpload from './components/FileUpload'
+import SentimentAnalysis from './components/SentimentAnalysis'
+import WordCloudComponent from './components/WordCloudComponent'
 
-import React, { useState } from 'react';
-import './App.css';
-import FileUpload from './components/FileUpload';
-import WordCloudComponent from './components/WordCloudComponent';
-import BarChart from './components/BarChart';
-import SentimentAnalysis from './components/SentimentAnalysis';
-
-interface AnalysisResult {
-  person1: string;
-  person2: string;
-  topWords1: { text: string; value: number }[];
-  topWords2: { text: string; value: number }[];
+interface WordData {
+  text: string
+  value: number
 }
 
+interface AnalysisResult {
+  person1: string
+  person2: string
+  topWords1: WordData[]
+  topWords2: WordData[]
+}
+
+interface CellProps {
+  title: string
+  children: React.ReactNode
+  fullWidth?: boolean
+}
+
+const Cell: React.FC<CellProps> = ({ title, children, fullWidth = false }) => (
+  <div style={{ ...cellStyle, ...(fullWidth ? fullWidthCellStyle : {}) }}>
+    <h3 style={{ textAlign: 'center', marginBottom: '5px' }}>{title}</h3>
+    {children}
+  </div>
+)
+
 const App: React.FC = () => {
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [sentimentData, setSentimentData] = useState<{ week: string; sentiment: number }[]>([]);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
+    null
+  )
+  const [sentimentData, setSentimentData] = useState<
+    { week: string; sentiment: number }[]
+  >([])
 
   const handleAnalysisResults = (result: AnalysisResult) => {
-    console.log('Analysis Result:', result);
-    setAnalysisResult(result);
-  };
+    console.log('Analysis Result:', result)
+    setAnalysisResult(result)
+  }
 
   const handleSentimentData = (data: { week: string; sentiment: number }[]) => {
-    console.log('Sentiment Data:', data);
-    setSentimentData(data);
-  };
+    console.log('Sentiment Data:', data)
+    setSentimentData(data)
+  }
+
+  if (!analysisResult) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
+        <FileUpload
+          onAnalysisComplete={handleAnalysisResults}
+          onSentimentAnalysisComplete={handleSentimentData}
+        />
+      </div>
+    )
+  }
 
   return (
-    <div className="app-container">
-      {!analysisResult ? (
-        <div className="file-upload-centered">
-          <FileUpload
-            onAnalysisComplete={handleAnalysisResults}
-            onSentimentAnalysisComplete={handleSentimentData}
-          />
-        </div>
-      ) : (
-        <div className="dashboard-grid">
-          {/* Word Cloud Section */}
-          <div className="word-cloud-container">
-            <h3 className="word-cloud-title word-cloud-title-left">{`Word Cloud for ${analysisResult.person1}`}</h3>
-            <div className="word-cloud">
+      <div style={containerStyle}>
+        {(['person1', 'person2'] as const).map((person, index) => (
+          <div key={person} style={columnStyle}>
+            <Cell title={`${analysisResult[person]}'s Word Cloud`}>
               <WordCloudComponent
-                data={analysisResult.topWords1}
-                color="#007bff"
-                title={`Top words for ${analysisResult.person1}`}
+                data={
+                  analysisResult[
+                    `topWords${index + 1}` as 'topWords1' | 'topWords2'
+                  ]
+                }
+                color={index === 0 ? '#007bff' : '#28a745'}
+                title={`Top words for ${analysisResult[person]}`}
               />
-            </div>
-            <div className="word-cloud">
-              <WordCloudComponent
-                data={analysisResult.topWords2}
-                color="#28a745"
-                title={`Top words for ${analysisResult.person2}`}
-              />
-            </div>
-            <h3 className="word-cloud-title">{`Word Cloud for ${analysisResult.person2}`}</h3>
+            </Cell>
           </div>
+        ))}
+        <Cell title="Analysis" fullWidth={true}>
+          <SentimentAnalysis data={sentimentData} />
+        </Cell>
+      </div>
+  )
+}
 
-          {/* Bar Chart Section */}
-          <div className="segment bar-chart">
-            <h3 className="segment-title">{`Bar Chart for ${analysisResult.person1}`}</h3>
-            <BarChart
-              data={{
-                labels: analysisResult.topWords1.map((word) => word.text),
-                values: analysisResult.topWords1.map((word) => word.value),
-              }}
-            />
-          </div>
-          <div className="segment bar-chart">
-            <h3 className="segment-title">{`Bar Chart for ${analysisResult.person2}`}</h3>
-            <BarChart
-              data={{
-                labels: analysisResult.topWords2.map((word) => word.text),
-                values: analysisResult.topWords2.map((word) => word.value),
-              }}
-            />
-          </div>
+const containerStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  height: '100vh',
+  padding: '2px',
+}
 
-          {/* Sentiment Analysis Section */}
-          <div className="segment sentiment-analysis">
-            <h3 className="segment-title">Cumulative Sentiment Analysis</h3>
-            {sentimentData.length > 0 ? (
-              <SentimentAnalysis data={sentimentData} />
-            ) : (
-              <p>No sentiment data available</p>
-            )}
-          </div>
+const columnStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  flex: '1 0 50%',
+}
 
-          {/* Placeholder Section */}
-          <div className="segment placeholder">
-            <h3 className="segment-title">Additional Analysis</h3>
-            <p>Space for future analysis components</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+const cellStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+  flex: 1,
+  margin: '2px',
+  padding: '2px',
+  backgroundColor: '#f0f0f0',
+  borderRadius: '8px',
+}
 
-export default App;
+const fullWidthCellStyle: React.CSSProperties = {
+  flex: '1 0 100%',
+}
+
+export default App

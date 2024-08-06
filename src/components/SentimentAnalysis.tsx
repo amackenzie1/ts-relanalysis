@@ -1,19 +1,19 @@
-import React from 'react';
-import { Bar } from 'react-chartjs-2';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
   BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
   Title,
   Tooltip,
-  Legend,
-} from 'chart.js';
+} from 'chart.js'
+import React from 'react'
+import { Bar } from 'react-chartjs-2'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 interface SentimentAnalysisProps {
-  data: { week: string; sentiment: number }[];
+  data: { week: string; sentiment: number }[]
 }
 
 const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ data }) => {
@@ -45,7 +45,7 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ data }) => {
         text: 'Weekly Sentiment Score',
       },
     },
-  };
+  }
 
   const chartData = {
     labels: data.map((entry) => entry.week),
@@ -56,13 +56,13 @@ const SentimentAnalysis: React.FC<SentimentAnalysisProps> = ({ data }) => {
         backgroundColor: 'rgba(75,192,192,0.6)',
       },
     ],
-  };
+  }
 
   return (
-    <div className="sentiment-chart">
+    <div style={{ height: '100%', width: '90%' }}>
       <Bar data={chartData} options={chartOptions} />
     </div>
-  );
-};
+  )
+}
 
-export default SentimentAnalysis;
+export default SentimentAnalysis

@@ -56,8 +56,7 @@
 }
 
 .sentiment-analysis {
-  grid-column: 1;
-  grid-row: 3;
+  min-width: 90%;
 }
 
 .placeholder {
