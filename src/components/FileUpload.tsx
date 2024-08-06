@@ -47,7 +47,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
           messages = whatsapp(content)
         } else if (content.match(basic_regex)) {
           messages = basic(content)
-        }
+        }        
+
 
         const result = analyzeText(messages)
         setError(null)

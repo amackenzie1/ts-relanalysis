@@ -20,6 +20,7 @@ export const analyzeText = (messages: ChatMessage[]): AnalysisResult => {
   const wordRegex = /\b\w+\b/gi
 
   // Extract names
+  console.log(messages)
   messages.forEach((message) => {
     if (message.person) {
       names.add(message.person)

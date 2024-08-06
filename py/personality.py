@@ -157,7 +157,7 @@ async def predict_mbti_from_chat(file_path, target_chunk_count=100):
     return final_predictions, predictions, letter_counts, significances, len(chunks)
 
 async def run_analysis():
-    chat_file_path = 'hangouts-conversation-21.txt'  # Replace with your actual file path
+    chat_file_path = '_chat.txt'  # Replace with your actual file path
     try:
         logger.info("Starting MBTI prediction process")
         final_predictions, all_predictions, letter_counts, significances, chunk_count = await predict_mbti_from_chat(chat_file_path)
