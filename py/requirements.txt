@@ -1,0 +1,3 @@
+aiohttp 
+scipy 
+nest_asyncio

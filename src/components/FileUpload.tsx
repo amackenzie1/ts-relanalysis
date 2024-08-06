@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Sentiment from 'sentiment'
 import { basic, basic_regex } from '../utils/basic'
+import { clean } from '../utils/clean'
 import { analyzeText } from '../utils/textAnalysis'
 import { ChatMessage } from '../utils/types'
 import { whatsapp, whatsapp_regex } from '../utils/whatsapp'
@@ -13,11 +14,15 @@ interface AnalysisResult {
   topWords2: { text: string; value: number }[]
 }
 
+interface SentimentData {
+  week: string
+  sentiment1: number
+  sentiment2: number
+}
+
 interface FileUploadProps {
   onAnalysisComplete: (result: AnalysisResult) => void
-  onSentimentAnalysisComplete: (
-    data: { week: string; sentiment: number }[]
-  ) => void
+  onSentimentAnalysisComplete: (data: SentimentData[]) => void
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
@@ -25,6 +30,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   onSentimentAnalysisComplete,
 }) => {
   const [error, setError] = useState<string | null>(null)
+  const [sentiments, setSentiments] = useState<Object[]>([])
   const sentiment = new Sentiment()
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,55 +40,68 @@ const FileUpload: React.FC<FileUploadProps> = ({
     const reader = new FileReader()
     reader.onload = (e: ProgressEvent<FileReader>) => {
       try {
-        const content = e.target?.result as string
+        let content = e.target?.result as string
+        content = clean(content)
         let messages: ChatMessage[] = []
         if (content.match(whatsapp_regex)) {
           messages = whatsapp(content)
         } else if (content.match(basic_regex)) {
           messages = basic(content)
         }
+
         const result = analyzeText(messages)
         setError(null)
         onAnalysisComplete(result)
 
         // Perform sentiment analysis
-        const sentimentData: { week: string; sentiment: number }[] = []
+        const sentimentData: SentimentData[] = []
         let currentWeek = ''
-        let weekSentiment = 0
-        let messageCount = 0
+        let weekSentiment1 = 0
+        let weekSentiment2 = 0
+        let messageCount1 = 0
+        let messageCount2 = 0
 
-        messages.forEach(({ message, date }) => {
+        messages.forEach(({ message, date, person }) => {
           const week = `${date.getFullYear()}-W${Math.ceil(
             (date.getTime() -
               new Date(date.getFullYear() + '-01-01').getTime()) /
               (1000 * 60 * 60 * 24 * 7)
           )}`
-          console.log(week, date)
 
           if (week !== currentWeek) {
             if (currentWeek !== '') {
               sentimentData.push({
                 week: currentWeek,
-                sentiment: weekSentiment / messageCount,
+                sentiment1: weekSentiment1 / (messageCount1 || 1),
+                sentiment2: weekSentiment2 / (messageCount2 || 1),
               })
             }
             currentWeek = week
-            weekSentiment = 0
-            messageCount = 0
+            weekSentiment1 = 0
+            weekSentiment2 = 0
+            messageCount1 = 0
+            messageCount2 = 0
           }
 
           const sentimentScore = sentiment.analyze(message).score
-          weekSentiment += sentimentScore
-          messageCount++
+          if (person === result.person1) {
+            weekSentiment1 += sentimentScore
+            messageCount1++
+          } else if (person === result.person2) {
+            weekSentiment2 += sentimentScore
+            messageCount2++
+          }
         })
 
         // Add the last week
-        if (messageCount > 10) {
+        if (messageCount1 > 5 || messageCount2 > 5) {
           sentimentData.push({
             week: currentWeek,
-            sentiment: weekSentiment / messageCount,
+            sentiment1: weekSentiment1 / (messageCount1 || 1),
+            sentiment2: weekSentiment2 / (messageCount2 || 1),
           })
         }
+
         onSentimentAnalysisComplete(sentimentData)
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err))

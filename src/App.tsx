@@ -33,7 +33,7 @@ const App: React.FC = () => {
     null
   )
   const [sentimentData, setSentimentData] = useState<
-    { week: string; sentiment: number }[]
+    { week: string; sentiment1: number, sentiment2: number }[]
   >([])
 
   const handleAnalysisResults = (result: AnalysisResult) => {
@@ -41,7 +41,7 @@ const App: React.FC = () => {
     setAnalysisResult(result)
   }
 
-  const handleSentimentData = (data: { week: string; sentiment: number }[]) => {
+  const handleSentimentData = (data: { week: string; sentiment1: number, sentiment2: number }[]) => {
     console.log('Sentiment Data:', data)
     setSentimentData(data)
   }
