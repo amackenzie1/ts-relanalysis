@@ -1,0 +1,216 @@
+import re
+from collections import Counter
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+import numpy as np
+import colorsys
+import openai
+import json
+import logging
+import os
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Set up OpenAI API key
+openai.api_key = os.getenv("API_KEY")
+
+def clean_and_tokenize(text):
+    text = re.sub(r'http\S+|www\S+|https\S+|\U0001F600-\U0001F64F|\U0001F300-\U0001F5FF|\U0001F680-\U0001F6FF|\U0001F1E0-\U0001F1FF', '', text, flags=re.MULTILINE)
+    words = re.findall(r'\b\w+\b', text.lower())
+    words = [word for word in words if len(word) > 2]
+    return words
+
+def generate_soft_color_func(saturation=0.3, value=0.9):
+    def color_func(word, font_size, position, orientation, random_state=None, **kwargs):
+        hue = np.random.uniform(0, 1)
+        r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
+        return f"rgb({int(r*255)}, {int(g*255)}, {int(b*255)})"
+    return color_func
+
+def create_word_cloud(word_ratios, title, size_ratio=1.5):
+    if not word_ratios:
+        logger.warning(f"No words to create word cloud for {title}")
+        return
+    
+    logger.info(f"Creating word cloud for {title}")
+    adjusted_ratios = {word: (ratio ** size_ratio) for word, ratio in word_ratios.items()}
+    
+    wordcloud = WordCloud(width=800, height=400, 
+                          background_color='white', 
+                          color_func=generate_soft_color_func(),
+                          min_font_size=10,
+                          max_font_size=100).generate_from_frequencies(adjusted_ratios)
+    
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+    plt.title(title)
+    plt.tight_layout(pad=0)
+    plt.show()
+
+def preprocess_chat_content(content):
+    logger.info("Preprocessing chat content")
+    lines = content.split('\n')
+    cleaned_lines = [line for line in lines if not any(phrase in line for phrase in 
+                     ['Messages and calls are end-to-end encrypted', '<Media omitted>'])]
+    return '\n'.join(cleaned_lines)
+
+def parse_with_predefined_patterns(content):
+    logger.info("Attempting to parse with predefined patterns")
+    patterns = [
+        r'(\d{4}-\d{2}-\d{2},\s\d{1,2}:\d{2}\s(?:AM|PM))\s-\s([^:]+):\s(.+)',
+        r'(\d{1,2}/\d{1,2}/\d{2,4},?\s\d{1,2}:\d{2}(?::\d{2})?\s?(?:AM|PM)?\s?-\s?)([^:]+):\s(.+)',
+        r'(\[\d{1,2}/\d{1,2}/\d{2,4},?\s\d{1,2}:\d{2}(?::\d{2})?\s?(?:AM|PM)?\])\s([^:]+):\s(.+)'
+    ]
+
+    user_messages = {}
+    for i, pattern in enumerate(patterns, 1):
+        matches = re.findall(pattern, content, re.MULTILINE)
+        if matches:
+            logger.info(f"Successfully parsed using pattern {i}")
+            for _, user, message in matches:
+                user = user.strip()
+                if user not in user_messages:
+                    user_messages[user] = []
+                user_messages[user].append(message.strip())
+            break
+        else:
+            logger.info(f"Pattern {i} failed to match")
+
+    return user_messages if len(user_messages) == 2 else None
+
+def get_parsing_info_from_llm(content_sample):
+    logger.info("Requesting parsing information from LLM")
+    prompt = f"""
+    Analyze the following chat transcript sample and provide the following information:
+    1. The names of the two main users in the conversation.
+    2. A Python regex pattern to extract the timestamp, user, and message content.
+
+    Chat transcript sample:
+    {content_sample}
+
+    Provide your answer in the following JSON format:
+    {{
+        "user1": "Name1",
+        "user2": "Name2",
+        "regex_pattern": "your_regex_pattern_here"
+    }}
+    
+    Instructions for the regex pattern:
+    - Use named groups for 'timestamp', 'user', and 'message'.
+    - The pattern should match the entire line, including the timestamp and user name.
+    - Ensure the pattern accounts for variations in time format (e.g., "7:07 p.m." or "19:07").
+    - The 'message' group should capture the entire message, including any punctuation or special characters.
+    - Do not include the 'r' prefix in the regex pattern string.
+
+    Example regex pattern (adjust as needed):
+    "(?P<timestamp>\\d{4}-\\d{2}-\\d{2},\\s\\d{1,2}:\\d{2}\\s(?:AM|PM))\\s-\\s(?P<user>[^:]+):\\s(?P<message>.*)"
+    """
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that analyzes chat transcripts."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0
+    )
+
+    logger.info("Received response from OpenAI API. Parsing response...")
+    try:
+        response_content = response['choices'][0]['message']['content']
+        response_content = re.sub(r'^```json\n|```$', '', response_content.strip())
+        parsed_data = json.loads(response_content)
+        logger.info(f"LLM identified users: {parsed_data['user1']} and {parsed_data['user2']}")
+        logger.info(f"Suggested regex pattern: {parsed_data['regex_pattern']}")
+        return parsed_data
+    except (json.JSONDecodeError, KeyError) as e:
+        logger.error(f"Failed to parse LLM response: {str(e)}")
+        logger.error(f"LLM response content: {response['choices'][0]['message']['content']}")
+        return None
+
+def parse_chat(content, parsing_info):
+    logger.info("Parsing chat with LLM-provided information")
+    user_messages = {parsing_info['user1']: [], parsing_info['user2']: []}
+    pattern = re.compile(parsing_info['regex_pattern'])
+    
+    for line in content.split('\n'):
+        match = pattern.match(line)
+        if match:
+            user = match.group('user').strip()
+            message = match.group('message').strip()
+            if user in user_messages:
+                user_messages[user].append(message)
+    
+    return user_messages
+
+def parse_whatsapp_chat(file_path):
+    logger.info(f"Starting to parse WhatsApp chat from file: {file_path}")
+    with open(file_path, 'r', encoding='utf-8') as file:
+        content = file.read()
+
+    logger.info(f"File content length: {len(content)} characters")
+    
+    cleaned_content = preprocess_chat_content(content)
+    logger.info(f"Cleaned content length: {len(cleaned_content)} characters")
+
+    # Try predefined patterns first
+    user_messages = parse_with_predefined_patterns(cleaned_content)
+    
+    # If predefined patterns fail, use LLM
+    if not user_messages:
+        logger.warning("Predefined patterns failed. Attempting LLM parsing.")
+        parsing_info = get_parsing_info_from_llm(cleaned_content[:1000])
+        if parsing_info:
+            user_messages = parse_chat(cleaned_content, parsing_info)
+
+    if user_messages:
+        logger.info(f"Parsing completed. Number of users found: {len(user_messages)}")
+        for user, messages in user_messages.items():
+            logger.info(f"  {user}: {len(messages)} messages")
+    else:
+        logger.error("Failed to parse the chat with both predefined patterns and LLM.")
+
+    return user_messages
+
+# Load and parse the WhatsApp chat file
+file_path = '/Users/matthieuhuss/ts-relanalysis/src/ts-relanalysis/Chat2 (1).txt'
+user_messages = parse_whatsapp_chat(file_path)
+
+if user_messages:
+    total_messages = sum(len(messages) for messages in user_messages.values())
+    logger.info(f"\nTotal number of messages: {total_messages}")
+
+    user_word_counts = {user: Counter() for user in user_messages}
+    total_word_counts = {user: 0 for user in user_messages}
+
+    for user, messages in user_messages.items():
+        for message in messages:
+            words = clean_and_tokenize(message)
+            user_word_counts[user].update(words)
+            total_word_counts[user] += len(words)
+
+    logger.info("\nPer-user statistics:")
+    for user in user_messages:
+        logger.info(f"  {user}:")
+        logger.info(f"    Messages: {len(user_messages[user])}")
+        logger.info(f"    Total words: {total_word_counts[user]}")
+        logger.info(f"    Unique words: {len(user_word_counts[user])}")
+
+    word_ratios = {}
+    for user in user_messages:
+        word_ratios[user] = {}
+        for word in user_word_counts[user]:
+            user_count = user_word_counts[user][word]
+            other_users_count = sum(user_word_counts[other_user][word] for other_user in user_messages if other_user != user)
+            ratio = (user_count + 1) / (other_users_count + 1)
+            word_ratios[user][word] = ratio
+
+    logger.info("\nGenerating word clouds...")
+    for user in user_messages:
+        create_word_cloud(word_ratios[user], f"Word Cloud for {user}")
+
+    logger.info("Script execution completed")
+else:
+    logger.error("Failed to parse the chat. Please check the logs above for more details.")

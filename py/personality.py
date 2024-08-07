@@ -14,7 +14,7 @@ import re
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-openai_api_key = os.getenv(API_KEY)
+openai_api_key = os.getenv("API_KEY")
 
 def read_whatsapp_chat(file_path):
     logger.info(f"Reading WhatsApp chat from {file_path}")
@@ -140,15 +140,24 @@ async def process_chunk(session, chunk, messages, cache, chunk_number, total_chu
     
     logger.info(f"Sending chunk {chunk_number}/{total_chunks} to OpenAI API")
     api_call_start = time.time()
-    async with session.post('https://api.openai.com/v1/chat/completions', json={
-        "model": "gpt-4o-mini",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0
-    }, headers={"Authorization": f"Bearer {openai_api_key}"}) as response:
-        result = await response.json()
-        prediction = result['choices'][0]['message']['content']
-    api_call_duration = time.time() - api_call_start
-    logger.info(f"Received response for chunk {chunk_number}/{total_chunks} in {api_call_duration:.2f} seconds")
+    try:
+        async with session.post('https://api.openai.com/v1/chat/completions', json={
+            "model": "gpt-4o-mini",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0
+        }, headers={"Authorization": f"Bearer {openai_api_key}"}) as response:
+            result = await response.json()
+            api_call_duration = time.time() - api_call_start
+            logger.info(f"Received response for chunk {chunk_number}/{total_chunks} in {api_call_duration:.2f} seconds")
+            
+            if 'choices' not in result:
+                logger.error(f"Unexpected API response for chunk {chunk_number}/{total_chunks}: {result}")
+                return f"API Error: Unexpected response format for chunk {start}-{end}"
+            
+            prediction = result['choices'][0]['message']['content']
+    except Exception as e:
+        logger.error(f"API call failed for chunk {chunk_number}/{total_chunks}: {str(e)}")
+        return f"API Error: {str(e)} for chunk {start}-{end}"
     
     cache[cache_key] = prediction
     logger.info(f"Processed chunk {chunk_number}/{total_chunks} in {time.time() - chunk_start_time:.2f} seconds")
@@ -208,8 +217,14 @@ async def predict_mbti_from_chat(file_path, target_chunk_count=100, min_messages
         tasks = [process_chunk(session, chunk, messages, cache, i+1, len(chunks)) for i, chunk in enumerate(chunks)]
         chunk_predictions = []
         for i, task in enumerate(asyncio.as_completed(tasks)):
-            result = await task
-            chunk_predictions.append(result)
+            try:
+                result = await task
+                if result.startswith("API Error:"):
+                    logger.warning(f"Skipping error chunk: {result}")
+                else:
+                    chunk_predictions.append(result)
+            except Exception as e:
+                logger.error(f"Error processing chunk {i+1}: {str(e)}")
             log_progress(i+1, len(tasks), "Processing chunks")
     
     with open(cache_file, 'w') as f:
