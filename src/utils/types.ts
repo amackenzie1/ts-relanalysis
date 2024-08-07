@@ -1,5 +1,5 @@
 export type ChatMessage = {
-  person: string,
+  user: string,
   message: string,
   date: Date,
   extra?: MessageExtra

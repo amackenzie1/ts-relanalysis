@@ -1,9 +1,5 @@
-// src/utils/textAnalysis.ts
-
-import Sentiment from 'sentiment'
 import { ChatMessage } from './types'
 
-// Define the interface for the analysis result
 interface AnalysisResult {
   person1: string
   person2: string
@@ -14,17 +10,26 @@ interface AnalysisResult {
 }
 
 export const analyzeText = (messages: ChatMessage[]): AnalysisResult => {
-  const sentimentAnalyzer = new Sentiment()
   const LIMIT = 100
   const names = new Set<string>()
-  const wordRegex = /\b\w+\b/gi
+  const wordRegex = /\b[a-z]+\b/gi
 
-  // Extract names
-  console.log(messages)
-  messages.forEach((message) => {
-    if (message.person) {
-      names.add(message.person)
-    }
+  // Use a Map for faster lookups and insertions
+  const count1 = new Map<string, number>()
+  const count2 = new Map<string, number>()
+
+  // Process messages in a single pass
+  messages.forEach(({ message, user }) => {
+    if (user) names.add(user)
+
+    const words = message.toLowerCase().match(wordRegex) || []
+    const countMap = user === Array.from(names)[0] ? count1 : count2
+
+    words.forEach((word) => {
+      if (!/\d/.test(word)) {
+        countMap.set(word, (countMap.get(word) || 0) + 1)
+      }
+    })
   })
 
   if (names.size < 2) {
@@ -32,77 +37,34 @@ export const analyzeText = (messages: ChatMessage[]): AnalysisResult => {
   }
 
   const [person1, person2] = Array.from(names)
-  const words1: string[] = []
-  const words2: string[] = []
-  const sentimentScores1: { date: string; score: number }[] = []
-  const sentimentScores2: { date: string; score: number }[] = []
 
-  // Process lines for words and sentiment
-  messages.forEach(({ message, person, date }) => {
-    const extractedWords = message.toLowerCase().match(wordRegex) || []
-    const sentimentScore = sentimentAnalyzer.analyze(message).score
-    if (person === person1) {
-      words1.push(...extractedWords)
-      sentimentScores1.push({ date: date.toISOString(), score: sentimentScore })
-    } else if (person === person2) {
-      words2.push(...extractedWords)
-      sentimentScores2.push({ date: date.toISOString(), score: sentimentScore })
-    }
-  })
-
-  // Word counting
-  const count1 = words1.reduce(
-    (acc, word) => ({ ...acc, [word]: (acc[word] || 0) + 1 }),
-    {} as Record<string, number>
-  )
-  const count2 = words2.reduce(
-    (acc, word) => ({ ...acc, [word]: (acc[word] || 0) + 1 }),
-    {} as Record<string, number>
-  )
-
-  // Word ratio calculation
-  const allWords = new Set([...Object.keys(count1), ...Object.keys(count2)])
-  const ratios: Record<string, number> = {}
+  // Calculate ratios and sort in a single pass
+  const ratios: [string, number][] = []
+  const allWords = new Set([...count1.keys(), ...count2.keys()])
 
   allWords.forEach((word) => {
-    const c1 = count1[word] || 0
-    const c2 = count2[word] || 0
-    ratios[word] = (c1 + 1) / (c2 + 1)
+    const c1 = count1.get(word) || 0
+    const c2 = count2.get(word) || 0
+    ratios.push([word, (c1 + 1) / (c2 + 1)])
   })
 
-  // Sort and select top words
-  const sortedRatios = Object.entries(ratios).sort((a, b) => b[1] - a[1])
-  const topWords1 = sortedRatios
+  ratios.sort((a, b) => b[1] - a[1])
+
+  // Extract top words
+  const topWords1 = ratios
     .slice(0, LIMIT)
     .map(([text, value]) => ({ text, value }))
-  const topWords2 = sortedRatios
+  const topWords2 = ratios
     .slice(-LIMIT)
     .reverse()
     .map(([text, value]) => ({ text, value: 1 / value }))
 
-  // Calculate weekly sentiment averages
-  const calculateWeeklyAverage = (
-    scores: { date: string; score: number }[]
-  ) => {
-    const weeklySentiment: Record<string, { score: number; count: number }> = {}
-
-    scores.forEach(({ date, score }) => {
-      const week = new Date(date).toISOString().substring(0, 10) // Format as "YYYY-MM-DD"
-      if (!weeklySentiment[week]) {
-        weeklySentiment[week] = { score: 0, count: 0 }
-      }
-      weeklySentiment[week].score += score
-      weeklySentiment[week].count += 1
-    })
-
-    return Object.entries(weeklySentiment).map(([week, { score, count }]) => ({
-      week,
-      sentiment: score / count,
-    }))
+  return {
+    person1,
+    person2,
+    topWords1,
+    topWords2,
+    sentiment1: [],
+    sentiment2: [],
   }
-
-  const sentiment1 = calculateWeeklyAverage(sentimentScores1)
-  const sentiment2 = calculateWeeklyAverage(sentimentScores2)
-
-  return { person1, person2, topWords1, topWords2, sentiment1, sentiment2 }
 }

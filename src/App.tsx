@@ -1,52 +1,26 @@
-import React, { useState } from 'react'
-import FileUpload from './components/FileUpload'
-import SentimentAnalysis from './components/SentimentAnalysis'
+import React, { useMemo, useState } from 'react'
+import FileUploadAndParse from './components/FileUploadAndParse'
 import WordCloudComponent from './components/WordCloudComponent'
-
-interface WordData {
-  text: string
-  value: number
-}
-
-interface AnalysisResult {
-  person1: string
-  person2: string
-  topWords1: WordData[]
-  topWords2: WordData[]
-}
-
-interface CellProps {
-  title: string
-  children: React.ReactNode
-  fullWidth?: boolean
-}
-
-const Cell: React.FC<CellProps> = ({ title, children, fullWidth = false }) => (
-  <div style={{ ...cellStyle, ...(fullWidth ? fullWidthCellStyle : {}) }}>
-    <h3 style={{ textAlign: 'center', marginBottom: '5px' }}>{title}</h3>
-    {children}
-  </div>
-)
+import { analyzeText } from './utils/textAnalysis'
+import { ChatMessage } from './utils/types'
 
 const App: React.FC = () => {
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
-    null
-  )
-  const [sentimentData, setSentimentData] = useState<
-    { week: string; sentiment1: number, sentiment2: number }[]
-  >([])
+  const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
-  const handleAnalysisResults = (result: AnalysisResult) => {
-    console.log('Analysis Result:', result)
-    setAnalysisResult(result)
+  const analysisResult = useMemo(() => {
+    if (parsedData) {
+      return analyzeText(parsedData)
+    }
+    return null
+  }, [parsedData])
+
+  const handleParseComplete = (data: ChatMessage[]) => {
+    setParsedData(data)
+    setIsLoading(false)
   }
 
-  const handleSentimentData = (data: { week: string; sentiment1: number, sentiment2: number }[]) => {
-    console.log('Sentiment Data:', data)
-    setSentimentData(data)
-  }
-
-  if (!analysisResult) {
+  if (isLoading) {
     return (
       <div
         style={{
@@ -56,66 +30,54 @@ const App: React.FC = () => {
           height: '100vh',
         }}
       >
-        <FileUpload
-          onAnalysisComplete={handleAnalysisResults}
-          onSentimentAnalysisComplete={handleSentimentData}
-        />
+        <div className="spinner" />
       </div>
     )
   }
 
+  if (parsedData === null) {
+    return <FileUploadAndParse onParseComplete={handleParseComplete} />
+  }
+
   return (
-      <div style={containerStyle}>
-        {(['person1', 'person2'] as const).map((person, index) => (
-          <div key={person} style={columnStyle}>
-            <Cell title={`${analysisResult[person]}'s Word Cloud`}>
-              <WordCloudComponent
-                data={
-                  analysisResult[
-                    `topWords${index + 1}` as 'topWords1' | 'topWords2'
-                  ]
-                }
-                color={index === 0 ? '#007bff' : '#28a745'}
-                title={`Top words for ${analysisResult[person]}`}
-              />
-            </Cell>
-          </div>
-        ))}
-        <Cell title="Analysis" fullWidth={true}>
-          <SentimentAnalysis data={sentimentData} />
-        </Cell>
+    parsedData &&
+    analysisResult && (
+      <div style={{ padding: '10px' }}>
+        <WordCloudComponent
+          analysisResult={analysisResult}
+          color1="#007bff"
+          color2="#28a745"
+        />
       </div>
+    )
   )
 }
 
-const containerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  height: '100vh',
-  padding: '2px',
-}
+const styles = `
+  .spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: #007bff;
+    animation: spin 1s ease infinite;
+  }
 
-const columnStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  flex: '1 0 50%',
-}
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+`
 
-const cellStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  flex: 1,
-  margin: '2px',
-  padding: '2px',
-  backgroundColor: '#f0f0f0',
-  borderRadius: '8px',
-}
+const AppWithStyles = () => (
+  <>
+    <style>{styles}</style>
+    <App />
+  </>
+)
 
-const fullWidthCellStyle: React.CSSProperties = {
-  flex: '1 0 100%',
-}
-
-export default App
+export default AppWithStyles
