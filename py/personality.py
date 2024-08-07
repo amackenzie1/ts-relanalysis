@@ -1,52 +1,129 @@
-import asyncio
-import json
-import logging
-import math
-import os
-import time
-from collections import Counter
-
 import aiohttp
-import nest_asyncio
-from parsers.whatsapp import parse_whatsapp
-from parsers.hangouts import parse_hangouts
+import asyncio
+import logging
+import time
+from collections import Counter, defaultdict
 from scipy.stats import binomtest
+import math
+import json
+import os
+import nest_asyncio
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-# load from env 
-openai_api_key = os.getenv('OPENAI_API_KEY')
+
+openai_api_key = os.getenv(API_KEY)
 
 def read_whatsapp_chat(file_path):
     logger.info(f"Reading WhatsApp chat from {file_path}")
     start_time = time.time()
     with open(file_path, 'r', encoding='utf-8') as file:
-        chat = file.read()
-    return chat
+        chat_lines = file.readlines()
+    logger.info(f"Read {len(chat_lines)} lines in {time.time() - start_time:.2f} seconds")
+    return chat_lines
 
-def create_adaptive_chunks(messages, target_chunk_count=100):
+def extract_conversations(chat_lines, message_range=None):
+    logger.info("Extracting conversations from chat lines")
+    start_time = time.time()
+    messages = []
+    message_counts = defaultdict(int)
+    current_sender = None
+    current_message = ""
+
+    # Regular expressions for different date formats
+    patterns = [
+        r'\[(\d{1,2}/\d{1,2}/\d{2,4},\s+\d{1,2}:\d{2}:\d{2}\s+[AP]M)\]\s+([^:]+):\s+(.*)',  # Format 1
+        r'(\d{2}/\d{2}/\d{4},\s+\d{2}:\d{2})\s+-\s+([^:]+):\s+(.*)',  # Format 2
+        r'(\d{4}-\d{2}-\d{2},\s+\d{1,2}:\d{2}\s+[ap]\.m\.)\s+-\s+([^:]+):\s+(.*)'  # Format 3
+    ]
+
+    for line in chat_lines:
+        matched = False
+        for pattern in patterns:
+            match = re.match(pattern, line)
+            if match:
+                if current_sender and current_message:
+                    messages.append((current_sender, current_message.strip()))
+                    message_counts[current_sender] += 1
+                
+                if len(match.groups()) == 3:
+                    _, current_sender, current_message = match.groups()
+                else:
+                    current_sender, current_message = match.groups()[1:]
+                
+                matched = True
+                break
+        
+        if not matched:
+            current_message += " " + line.strip()
+
+    if current_sender and current_message:
+        messages.append((current_sender, current_message.strip()))
+        message_counts[current_sender] += 1
+
+    # Remove system messages and empty senders
+    messages = [(sender, msg) for sender, msg in messages if sender and sender not in ["Les messages et les appels sont chiffrés de bout en bout.", "Messages and calls are end-to-end encrypted."]]
+
+    if message_range:
+        messages = messages[message_range[0]:message_range[1]]
+        # Recalculate message counts for the range
+        message_counts = defaultdict(int)
+        for sender, _ in messages:
+            message_counts[sender] += 1
+
+    logger.info(f"Extracted {len(messages)} messages in {time.time() - start_time:.2f} seconds")
+    logger.info(f"Message counts per participant: {dict(message_counts)}")
+    
+    # Log the first few messages for debugging
+    for i, (sender, message) in enumerate(messages[:5]):
+        logger.debug(f"Message {i+1}: {sender}: {message[:50]}...")
+
+    return messages, dict(message_counts)
+
+def log_progress(current, total, message):
+    percent = (current / total) * 100
+    logger.info(f"{message}: {percent:.2f}% ({current}/{total})")
+
+def create_adaptive_chunks(messages, target_chunk_count=100, min_messages_per_participant=3):
     logger.info(f"Creating adaptive chunks with target count of {target_chunk_count}")
     start_time = time.time()
-    total_messages = len(messages) 
-    print(f"Total: {total_messages}")
-    chunk_size = math.ceil(total_messages / target_chunk_count)
+    total_messages = len(messages)
+    initial_chunk_size = max(math.ceil(total_messages / target_chunk_count), min_messages_per_participant * 2)
     chunks = []
     
-    for start in range(0, total_messages, chunk_size):
-        end = min(start + chunk_size, total_messages)
+    start = 0
+    while start < total_messages:
+        end = min(start + initial_chunk_size, total_messages)
+        
+        # Efficiently count messages per participant
+        participant_counts = {}
+        for i in range(start, end):
+            sender, _ = messages[i]
+            participant_counts[sender] = participant_counts.get(sender, 0) + 1
+        
+        # Extend chunk if necessary, but limit extension
+        extension_limit = min(initial_chunk_size, total_messages - end)
+        for i in range(extension_limit):
+            if all(count >= min_messages_per_participant for count in participant_counts.values()):
+                break
+            if end + i < total_messages:
+                sender, _ = messages[end + i]
+                participant_counts[sender] = participant_counts.get(sender, 0) + 1
+                end = end + i + 1
+        
         chunks.append((start, end))
+        start = end
     
-    logger.info(f"Created {len(chunks)} chunks of size {chunk_size} in {time.time() - start_time:.2f} seconds")
+    logger.info(f"Created {len(chunks)} chunks in {time.time() - start_time:.2f} seconds")
     return chunks
 
 def create_prompt(messages, start, end):
     prompt = "Analyze the following WhatsApp conversation chunk and predict the MBTI personality types of the participants. Provide only the MBTI type for each participant:\n\n"
-    for message in messages[start:end]:
-        prompt += f"{message['participant']} - {message['message']}\n"
-    prompt += "\n"
-    prompt += "Based on these messages, what are the likely MBTI types of each participant? Provide only the MBTI type for each participant as json. Use the exact names displayed in the chat. Example response: {'Kathy': 'INTJ', 'Sandy MacKenzie': 'ENFP'}\n"
-    print(prompt)
+    for sender, message in messages[start:end]:
+        prompt += f"{sender}: {message}\n"
+    prompt += "\nBased on these messages, what are the likely MBTI types of each participant? Provide only the MBTI type for each participant."
     return prompt
 
 async def process_chunk(session, chunk, messages, cache, chunk_number, total_chunks):
@@ -66,14 +143,12 @@ async def process_chunk(session, chunk, messages, cache, chunk_number, total_chu
     async with session.post('https://api.openai.com/v1/chat/completions', json={
         "model": "gpt-4o-mini",
         "messages": [{"role": "user", "content": prompt}],
-        "response_format": { "type": "json_object" },
         "temperature": 0
     }, headers={"Authorization": f"Bearer {openai_api_key}"}) as response:
         result = await response.json()
-        print(result)
         prediction = result['choices'][0]['message']['content']
     api_call_duration = time.time() - api_call_start
-    logger.info(f"Received response for chunk {chunk_number}/{total_chunks} in {api_call_duration:.2f} seconds: {prediction}")
+    logger.info(f"Received response for chunk {chunk_number}/{total_chunks} in {api_call_duration:.2f} seconds")
     
     cache[cache_key] = prediction
     logger.info(f"Processed chunk {chunk_number}/{total_chunks} in {time.time() - chunk_start_time:.2f} seconds")
@@ -85,11 +160,12 @@ def count_mbti_letters(mbti_list):
         for letter in mbti:
             if letter in letter_counts:
                 letter_counts[letter] += 1
-
     return letter_counts
 
-def is_significant_difference(count1, count2, alpha=0.05):
+def is_significant_difference(count1, count2, alpha=0.3):
     total = count1 + count2
+    if total == 0:
+        return False
     result = binomtest(count1, total, p=0.5)
     return result.pvalue < alpha
 
@@ -97,7 +173,6 @@ def determine_final_mbti_with_significance(letter_counts):
     final_mbti = ""
     significance = []
     
-    print(letter_counts) 
     pairs = [('E', 'I'), ('N', 'S'), ('T', 'F'), ('J', 'P')]
     for a, b in pairs:
         count_a, count_b = letter_counts[a], letter_counts[b]
@@ -105,20 +180,20 @@ def determine_final_mbti_with_significance(letter_counts):
             final_mbti += a
         else:
             final_mbti += b
-
+        
         if not is_significant_difference(count_a, count_b):
             significance.append(f"{a}/{b}")
     
     return final_mbti, significance
 
-async def predict_mbti_from_chat(file_path, target_chunk_count=100):
+async def predict_mbti_from_chat(file_path, target_chunk_count=100, min_messages_per_participant=3, message_range=None):
     overall_start_time = time.time()
     
-    chat = read_whatsapp_chat(file_path)
-    messages = parse_whatsapp(chat)
+    chat_lines = read_whatsapp_chat(file_path)
+    messages, message_counts = extract_conversations(chat_lines, message_range)
     
-    chunks = create_adaptive_chunks(messages, target_chunk_count)
-    
+    chunks = create_adaptive_chunks(messages, target_chunk_count, min_messages_per_participant)
+      
     cache_file = f"{file_path}_cache.json"
     if os.path.exists(cache_file):
         with open(cache_file, 'r') as f:
@@ -131,21 +206,27 @@ async def predict_mbti_from_chat(file_path, target_chunk_count=100):
     async with aiohttp.ClientSession() as session:
         logger.info("Starting asynchronous processing of chunks")
         tasks = [process_chunk(session, chunk, messages, cache, i+1, len(chunks)) for i, chunk in enumerate(chunks)]
-        chunk_predictions = await asyncio.gather(*tasks)
+        chunk_predictions = []
+        for i, task in enumerate(asyncio.as_completed(tasks)):
+            result = await task
+            chunk_predictions.append(result)
+            log_progress(i+1, len(tasks), "Processing chunks")
     
     with open(cache_file, 'w') as f:
         json.dump(cache, f)
     logger.info(f"Updated cache file with {len(cache)} entries")
     
     logger.info("Processing predictions")
-    predictions = {participant: [] for participant in set([message['participant'] for message in messages])}
-    print(predictions)
+    predictions = {}
     for chunk_prediction in chunk_predictions:
-        json_prediction = json.loads(chunk_prediction)
-        print(json_prediction)
-        for p, m in json_prediction.items():
-            if p in predictions:
-                predictions[p].append(m)
+        for line in chunk_prediction.split('\n'):
+            if ':' in line:
+                participant, mbti = line.split(':')
+                participant = participant.strip()
+                mbti = mbti.strip()
+                if participant not in predictions:
+                    predictions[participant] = []
+                predictions[participant].append(mbti)
     
     logger.info("Calculating final predictions and significances")
     final_predictions = {}
@@ -156,27 +237,57 @@ async def predict_mbti_from_chat(file_path, target_chunk_count=100):
         final_predictions[participant], significances[participant] = determine_final_mbti_with_significance(letter_counts[participant])
     
     logger.info(f"Total processing time: {time.time() - overall_start_time:.2f} seconds")
-    return final_predictions, predictions, letter_counts, significances, len(chunks)
+    return final_predictions, predictions, letter_counts, significances, len(chunks), message_counts
 
 async def run_analysis():
     chat_file_path = '_chat.txt'  # Replace with your actual file path
+    message_range = None  # Set to None to process all messages, or use a tuple like (0, 3000) for the first 3000 messages
     try:
         logger.info("Starting MBTI prediction process")
-        final_predictions, all_predictions, letter_counts, significances, chunk_count = await predict_mbti_from_chat(chat_file_path)
+        final_predictions, all_predictions, letter_counts, significances, chunk_count, message_counts = await predict_mbti_from_chat(
+            chat_file_path, 
+            target_chunk_count=100, 
+            min_messages_per_participant=3, 
+            message_range=message_range
+        )
         
-        print(f"\nAnalysis completed using {chunk_count} adaptive chunks.")
-        print("\nFinal MBTI Predictions:")
+        if not final_predictions:
+            logger.error("No predictions were made. Check if conversations were extracted correctly.")
+            return
+
+        total_messages = sum(message_counts.values())
+        
+        # Prepare the output
+        output = []
+        output.append(f"\nAnalysis completed using {chunk_count} adaptive chunks.")
+        output.append(f"Total messages analyzed: {total_messages}")
+        
+        if message_range:
+            output.append(f"Analyzed messages from index {message_range[0]} to {message_range[1]}")
+        
+        output.append("\nMessage count per participant:")
+        for participant, count in message_counts.items():
+            output.append(f"{participant}: {count} messages")
+        
+        output.append("\nFinal MBTI Predictions:")
         for participant, mbti in final_predictions.items():
-            print(f"{participant}: {mbti}")
-            print(f"  Letter Counts: {letter_counts[participant]}")
+            output.append(f"{participant}: {mbti}")
+            output.append(f"  Letter Counts: {letter_counts[participant]}")
             if significances[participant]:
                 interchangeable = " and ".join(significances[participant])
-                print(f"  Personality Plot Twist: The {interchangeable} preferences are locked in an epic duel of indecision!")
-            print()
+                output.append(f"  Personality Plot Twist: The {interchangeable} preferences are locked in an epic duel of indecision!")
+            output.append("")
         
-        print("All Predictions:")
+        output.append("All Predictions:")
         for participant, predictions in all_predictions.items():
-            print(f"{participant}: {predictions}")
+            output.append(f"{participant}: {predictions}")
+        
+        # Print the output
+        print("\n".join(output))
+        
+        # Log the output
+        for line in output:
+            logger.info(line)
         
         logger.info("MBTI prediction process completed")
     except Exception as e:
