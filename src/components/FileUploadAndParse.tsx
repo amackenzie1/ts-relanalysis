@@ -1,4 +1,3 @@
-// FileUploadAndParse.tsx
 import { Loader2, Upload } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import {
@@ -11,10 +10,16 @@ import { parse } from '../utils/universal'
 
 interface FileUploadAndParseProps {
   onParseComplete: (data: ChatMessage[]) => void
+  onUploadStart: () => void
+  onUploadComplete: (hash: string) => void
+  onUploadError: (error: Error) => void
 }
 
 const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
   onParseComplete,
+  onUploadStart,
+  onUploadComplete,
+  onUploadError,
 }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,7 +28,6 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
     const runCognitoTest = async () => {
       try {
         const identityId = await testCognitoCredentials()
-        console.log('Cognito credentials test passed. Identity ID:', identityId)
       } catch (error) {
         console.error('Cognito credentials test failed:', error)
         setError(
@@ -31,7 +35,6 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
         )
       }
     }
-
     runCognitoTest()
   }, [])
 
@@ -45,14 +48,24 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
     try {
       // Calculate hash
       const hash = await calculateHash(file)
-      console.log(`File hash: ${hash}`)
-      // Upload to S3 (or skip if already exists)
-      const uploadedHash = await uploadToS3(file, hash)
-      console.log(`File uploaded as: ${uploadedHash}`)
+
       // Parse file contents
       const text = await file.text()
       const parsedData = await parse(text)
+
+      // Notify parent that parsing is complete
       onParseComplete(parsedData)
+
+      // Start S3 upload in the background
+      onUploadStart()
+      uploadToS3(file, hash)
+        .then((uploadedHash) => {
+          onUploadComplete(uploadedHash)
+        })
+        .catch((error) => {
+          console.error('Error uploading file to S3:', error)
+          onUploadError(error)
+        })
     } catch (error) {
       console.error('Error processing file:', error)
       setError('Error processing file. Please try again.')
@@ -60,7 +73,6 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
       setIsLoading(false)
     }
   }
-
   if (isLoading) {
     return (
       <div

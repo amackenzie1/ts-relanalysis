@@ -1,14 +1,15 @@
-import aiohttp
 import asyncio
+import json
 import logging
+import math
+import os
+import re
 import time
 from collections import Counter, defaultdict
-from scipy.stats import binomtest
-import math
-import json
-import os
+
+import aiohttp
 import nest_asyncio
-import re
+from scipy.stats import binomtest
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

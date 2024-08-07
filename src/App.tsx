@@ -7,6 +7,7 @@ import { ChatMessage } from './utils/types'
 const App: React.FC = () => {
   const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
 
   const analysisResult = useMemo(() => {
     if (parsedData) {
@@ -18,6 +19,18 @@ const App: React.FC = () => {
   const handleParseComplete = (data: ChatMessage[]) => {
     setParsedData(data)
     setIsLoading(false)
+  }
+
+  const handleUploadStart = () => {
+    setUploadStatus('Uploading to S3...')
+  }
+
+  const handleUploadComplete = (hash: string) => {
+    setUploadStatus(`File uploaded successfully: ${hash}`)
+  }
+
+  const handleUploadError = (error: Error) => {
+    setUploadStatus(`Upload failed: ${error.message}`)
   }
 
   if (isLoading) {
@@ -36,7 +49,14 @@ const App: React.FC = () => {
   }
 
   if (parsedData === null) {
-    return <FileUploadAndParse onParseComplete={handleParseComplete} />
+    return (
+      <FileUploadAndParse
+        onParseComplete={handleParseComplete}
+        onUploadStart={handleUploadStart}
+        onUploadComplete={handleUploadComplete}
+        onUploadError={handleUploadError}
+      />
+    )
   }
 
   return (
