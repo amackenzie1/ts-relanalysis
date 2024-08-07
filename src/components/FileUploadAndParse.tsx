@@ -1,5 +1,11 @@
+// FileUploadAndParse.tsx
 import { Loader2, Upload } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import {
+  calculateHash,
+  testCognitoCredentials,
+  uploadToS3,
+} from '../utils/s3Upload'
 import { ChatMessage } from '../utils/types'
 import { parse } from '../utils/universal'
 
@@ -11,22 +17,45 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
   onParseComplete,
 }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const runCognitoTest = async () => {
+      try {
+        const identityId = await testCognitoCredentials()
+        console.log('Cognito credentials test passed. Identity ID:', identityId)
+      } catch (error) {
+        console.error('Cognito credentials test failed:', error)
+        setError(
+          'Failed to authenticate with Cognito. Please check your configuration.'
+        )
+      }
+    }
+
+    runCognitoTest()
+  }, [])
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0]
     if (!file) return
-
     setIsLoading(true)
-
+    setError(null)
     try {
+      // Calculate hash
+      const hash = await calculateHash(file)
+      console.log(`File hash: ${hash}`)
+      // Upload to S3 (or skip if already exists)
+      const uploadedHash = await uploadToS3(file, hash)
+      console.log(`File uploaded as: ${uploadedHash}`)
+      // Parse file contents
       const text = await file.text()
       const parsedData = await parse(text)
       onParseComplete(parsedData)
     } catch (error) {
-      console.error('Error parsing file:', error)
-      // Optionally, you can handle the error here (e.g., show an error message)
+      console.error('Error processing file:', error)
+      setError('Error processing file. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -54,11 +83,15 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
     <div
       style={{
         display: 'flex',
+        flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
         height: '100vh',
       }}
     >
+      {error && (
+        <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>
+      )}
       <label
         style={{
           display: 'flex',
