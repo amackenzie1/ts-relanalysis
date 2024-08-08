@@ -1,40 +1,40 @@
-import React, { useMemo, useState } from 'react'
-import FileUploadAndParse from './components/FileUploadAndParse'
-import WordCloudComponent from './components/WordCloudComponent'
-import MBTIAnalysis from './components/MBTIAnalysis' // Import the new component
-import BubbleBackground from './components/BubbleBackground'
-import Title from './components/Title'
-import { analyzeText } from './utils/textAnalysis'
-import { ChatMessage } from './utils/types'
+import React, { useMemo, useState } from 'react';
+import FileUploadAndParse from './components/FileUploadAndParse';
+import WordCloudComponent from './components/WordCloudComponent';
+import MBTIAnalysis from './components/MBTIAnalysis';
+import BubbleBackground from './components/BubbleBackground';
+import Title from './components/Title';
+import { analyzeText } from './utils/textAnalysis';
+import { ChatMessage } from './utils/types';
 
 const App: React.FC = () => {
-  const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+  const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
   const analysisResult = useMemo(() => {
     if (parsedData) {
-      return analyzeText(parsedData)
+      return analyzeText(parsedData);
     }
-    return null
-  }, [parsedData])
+    return null;
+  }, [parsedData]);
 
   const handleParseComplete = (data: ChatMessage[]) => {
-    setParsedData(data)
-    setIsLoading(false)
-  }
+    setParsedData(data);
+    setIsLoading(false);
+  };
 
   const handleUploadStart = () => {
-    setUploadStatus('Uploading to S3...')
-  }
+    setUploadStatus('Uploading to S3...');
+  };
 
   const handleUploadComplete = (hash: string) => {
-    setUploadStatus(`File uploaded successfully: ${hash}`)
-  }
+    setUploadStatus(`File uploaded successfully: ${hash}`);
+  };
 
   const handleUploadError = (error: Error) => {
-    setUploadStatus(`Upload failed: ${error.message}`)
-  }
+    setUploadStatus(`Upload failed: ${error.message}`);
+  };
 
   if (isLoading) {
     return (
@@ -48,7 +48,7 @@ const App: React.FC = () => {
       >
         <div className="spinner" />
       </div>
-    )
+    );
   }
 
   return (
@@ -72,12 +72,21 @@ const App: React.FC = () => {
                 color2="#28a745"
               />
             )}
-            <MBTIAnalysis parsedData={parsedData} /> {/* Add the MBTIAnalysis component here */}
+            <div className="mbti-analysis-wrapper" style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: '20px',
+              padding: '20px',
+              backgroundColor: 'rgba(192, 192, 192, 0.6)', // More transparent silvery background
+              borderRadius: '10px',
+            }}>
+              <MBTIAnalysis parsedData={parsedData} />
+            </div>
           </>
         )}
       </div>
     </>
-  )
+  );
 }
 
 const styles = `
@@ -97,6 +106,13 @@ const styles = `
       transform: rotate(360deg);
     }
   }
+  .mbti-analysis-wrapper {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    background-color: rgba(192, 192, 192, 0.6); // More transparent silvery background
+    border-radius: 10px;
+  }
 `
 
 const AppWithStyles = () => (
@@ -104,6 +120,6 @@ const AppWithStyles = () => (
     <style>{styles}</style>
     <App />
   </>
-)
+);
 
-export default AppWithStyles
+export default AppWithStyles;

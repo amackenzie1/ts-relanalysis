@@ -1,18 +1,19 @@
 import React from 'react';
 
-const Title: React.FC = () => {
+const Title = () => {
   return (
-    <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-      <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>
+    <div className="text-center py-4">
+      <h1 className="text-4xl font-bold">
         Welcome to{' '}
         <span
           style={{
             fontWeight: '800',
-            background: 'linear-gradient(to right, #A78BFA, #EC4899)',
+            background: 'linear-gradient(to right, #3B82F6, #00C4FF)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             color: 'transparent',
+            fontFamily: "'Comfortaa', sans-serif",
           }}
         >
           Mosaic
