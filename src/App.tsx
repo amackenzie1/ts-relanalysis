@@ -4,6 +4,7 @@ import WordCloudComponent from './components/WordCloudComponent'
 import { analyzeText } from './utils/textAnalysis'
 import { ChatMessage } from './utils/types'
 import BubbleBackground from './components/BubbleBackground'
+import Title from './components/Title'
 
 const App: React.FC = () => {
   const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null)
@@ -53,6 +54,7 @@ const App: React.FC = () => {
     <>
       {parsedData !== null && <BubbleBackground />}
       <div style={{ padding: '10px' }}>
+        {parsedData !== null && <Title />}  {/* Add the Title component here */}
         {parsedData === null ? (
           <FileUploadAndParse
             onParseComplete={handleParseComplete}
