@@ -30,10 +30,17 @@ const IndividualWordCloud: React.FC<IndividualWordCloudProps> = ({
   }
 
   return (
-    <div style={{ minWidth: '48%', margin: '10px' }}>
-      <h3 style={{ textAlign: 'center', color: '#555' }}>
+    <div style={{ minWidth: '48%' }}>
+      <div
+        style={{
+          textAlign: 'center',
+          color: 'black',
+          fontWeight: 'bold',
+          paddingBottom: '10px',
+        }}
+      >
         {person}'s Top Words
-      </h3>
+      </div>
       <div
         style={{
           width: '100%',
@@ -41,7 +48,7 @@ const IndividualWordCloud: React.FC<IndividualWordCloudProps> = ({
           borderRadius: '8px',
           padding: '2px',
           boxSizing: 'border-box',
-          backgroundColor: 'white',
+          backgroundColor: 'black',
         }}
       >
         <WordCloud
@@ -84,7 +91,6 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
         style={{
           display: 'flex',
           justifyContent: 'space-evenly',
-          margin: '20px 0',
         }}
       >
         <IndividualWordCloud

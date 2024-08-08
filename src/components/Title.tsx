@@ -1,8 +1,8 @@
-import React from 'react';
+import React from 'react'
 
 const Title: React.FC = () => {
   return (
-    <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+    <div style={{ textAlign: 'center' }}>
       <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>
         Welcome to{' '}
         <span
@@ -12,14 +12,13 @@ const Title: React.FC = () => {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            color: 'transparent',
           }}
         >
           Mosaic
         </span>
       </h1>
     </div>
-  );
-};
+  )
+}
 
-export default Title;
+export default Title

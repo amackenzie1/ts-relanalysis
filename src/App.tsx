@@ -3,6 +3,7 @@ import BubbleBackground from './components/BubbleBackground'
 import FileUploadAndParse from './components/FileUploadAndParse'
 import MBTIAnalysis from './components/MBTIAnalysis'
 import SentimentComponent from './components/SentimentComponent'
+import Title from './components/Title'
 import WordCloudComponent from './components/WordCloudComponent'
 import { analyzeText } from './utils/textAnalysis'
 import { ChatMessage } from './utils/types'
@@ -53,8 +54,8 @@ const App: React.FC = () => {
 
   return (
     <>
-      {parsedData !== null && <BubbleBackground />}
-      <div style={{ padding: '10px' }}>
+      <Title />
+      <div style={{ paddingLeft: '10px', paddingRight: '10px' }}>
         {parsedData === null ? (
           <FileUploadAndParse
             onParseComplete={handleParseComplete}
@@ -65,6 +66,7 @@ const App: React.FC = () => {
         ) : (
           analysisResult && (
             <div>
+              <BubbleBackground />
               <WordCloudComponent
                 analysisResult={analysisResult}
                 color1="#007bff"
