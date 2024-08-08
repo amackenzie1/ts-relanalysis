@@ -1,8 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import BubbleBackground from './components/BubbleBackground'
 import FileUploadAndParse from './components/FileUploadAndParse'
-import MBTIAnalysis from './components/MBTIAnalysis'
-import SentimentComponent from './components/SentimentComponent'
 import Title from './components/Title'
 import WordCloudComponent from './components/WordCloudComponent'
 import { analyzeText } from './utils/textAnalysis'
@@ -72,8 +70,8 @@ const App: React.FC = () => {
                 color1="#007bff"
                 color2="#28a745"
               />
-              <MBTIAnalysis parsedData={parsedData} />
-              <SentimentComponent />
+              {/* <MBTIAnalysis parsedData={parsedData} />
+              <SentimentComponent /> */}
             </div>
           )
         )}
