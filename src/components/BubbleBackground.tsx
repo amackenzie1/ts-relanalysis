@@ -17,33 +17,18 @@ const BubbleBackground: React.FC = () => {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    const bubbles: { x: number; y: number; radius: number; speed: number; color: string }[] = [];
-    for (let i = 0; i < 50; i++) {
-      bubbles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: Math.random() * 20 + 10,
-        speed: Math.random() * 0.5 + 0.1,
-        color: `rgba(${Math.random() * 100 + 155}, ${Math.random() * 100 + 155}, ${Math.random() * 100 + 155}, 0.3)`,
-      });
-    }
+    let gradientShift = 0;
 
     const animate = () => {
-      ctx.fillStyle = 'rgba(18, 18, 18, 0.1)';
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, `hsl(${(gradientShift + 260) % 360}, 100%, 20%)`); // Dark purple
+      gradient.addColorStop(0.5, `hsl(${(gradientShift + 120) % 360}, 100%, 50%)`); // Neon green
+      gradient.addColorStop(1, `hsl(${(gradientShift + 0) % 360}, 100%, 5%)`); // Black
+
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      bubbles.forEach((bubble) => {
-        ctx.beginPath();
-        ctx.fillStyle = bubble.color;
-        ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        bubble.y -= bubble.speed;
-        if (bubble.y + bubble.radius < 0) {
-          bubble.y = canvas.height + bubble.radius;
-          bubble.x = Math.random() * canvas.width;
-        }
-      });
+      gradientShift += 0.5; // Adjust the speed of color transition
 
       requestAnimationFrame(animate);
     };

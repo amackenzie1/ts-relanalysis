@@ -4,6 +4,7 @@ import WordCloudComponent from './components/WordCloudComponent'
 import { analyzeText } from './utils/textAnalysis'
 import { ChatMessage } from './utils/types'
 import BubbleBackground from './components/BubbleBackground'
+
 const App: React.FC = () => {
   const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
@@ -48,28 +49,28 @@ const App: React.FC = () => {
     )
   }
 
-  if (parsedData === null) {
-    return (
-      <FileUploadAndParse
-        onParseComplete={handleParseComplete}
-        onUploadStart={handleUploadStart}
-        onUploadComplete={handleUploadComplete}
-        onUploadError={handleUploadError}
-      />
-    )
-  }
-
   return (
-    parsedData &&
-    analysisResult && (
+    <>
+      {parsedData !== null && <BubbleBackground />}
       <div style={{ padding: '10px' }}>
-        <WordCloudComponent
-          analysisResult={analysisResult}
-          color1="#007bff"
-          color2="#28a745"
-        />
+        {parsedData === null ? (
+          <FileUploadAndParse
+            onParseComplete={handleParseComplete}
+            onUploadStart={handleUploadStart}
+            onUploadComplete={handleUploadComplete}
+            onUploadError={handleUploadError}
+          />
+        ) : (
+          analysisResult && (
+            <WordCloudComponent
+              analysisResult={analysisResult}
+              color1="#007bff"
+              color2="#28a745"
+            />
+          )
+        )}
       </div>
-    )
+    </>
   )
 }
 
@@ -95,8 +96,9 @@ const styles = `
 
 const AppWithStyles = () => (
   <>
-    <BubbleBackground />
+    <style>{styles}</style>
     <App />
   </>
-);
+)
+
 export default AppWithStyles
