@@ -21,14 +21,14 @@ const BubbleBackground: React.FC = () => {
 
     const animate = () => {
       const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      gradient.addColorStop(0, `hsl(${(gradientShift + 260) % 360}, 100%, 20%)`); // Dark purple
-      gradient.addColorStop(0.5, `hsl(${(gradientShift + 120) % 360}, 100%, 50%)`); // Neon green
-      gradient.addColorStop(1, `hsl(${(gradientShift + 0) % 360}, 100%, 5%)`); // Black
+      gradient.addColorStop(0, `hsl(${(gradientShift + 260) % 360}, 50%, 65%)`); // Dark purple
+      gradient.addColorStop(.5, `hsl(${(gradientShift + 260) % 360}, 10%, 40%)`); // Neon green
+      gradient.addColorStop(1, `hsl(${(gradientShift + 260) % 360}, 50%, 40%)`); // Blue
 
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      gradientShift += 0.5; // Adjust the speed of color transition
+      gradientShift += .2; // Adjust the speed of color transition
 
       requestAnimationFrame(animate);
     };
