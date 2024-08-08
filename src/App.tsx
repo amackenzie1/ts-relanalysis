@@ -3,7 +3,7 @@ import FileUploadAndParse from './components/FileUploadAndParse'
 import WordCloudComponent from './components/WordCloudComponent'
 import { analyzeText } from './utils/textAnalysis'
 import { ChatMessage } from './utils/types'
-
+import BubbleBackground from './components/BubbleBackground'
 const App: React.FC = () => {
   const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
@@ -95,9 +95,8 @@ const styles = `
 
 const AppWithStyles = () => (
   <>
-    <style>{styles}</style>
+    <BubbleBackground />
     <App />
   </>
-)
-
+);
 export default AppWithStyles

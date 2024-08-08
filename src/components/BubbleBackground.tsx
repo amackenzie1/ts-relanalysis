@@ -1,4 +1,3 @@
-// src/components/BubbleBackground.tsx
 import React, { useEffect, useRef } from 'react';
 
 const BubbleBackground: React.FC = () => {
@@ -7,7 +6,6 @@ const BubbleBackground: React.FC = () => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -60,8 +58,12 @@ const BubbleBackground: React.FC = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 w-full h-full"
-      style={{ zIndex: -1 }}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: -1,
+      }}
     />
   );
 };
