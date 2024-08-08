@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react'
-import FileUploadAndParse from './components/FileUploadAndParse'
-import WordCloudComponent from './components/WordCloudComponent'
-import MBTIAnalysis from './components/MBTIAnalysis' // Import the new component
 import BubbleBackground from './components/BubbleBackground'
-import Title from './components/Title'
+import FileUploadAndParse from './components/FileUploadAndParse'
+import MBTIAnalysis from './components/MBTIAnalysis'
+import SentimentComponent from './components/SentimentComponent'
+import WordCloudComponent from './components/WordCloudComponent'
 import { analyzeText } from './utils/textAnalysis'
 import { ChatMessage } from './utils/types'
 
@@ -55,7 +55,6 @@ const App: React.FC = () => {
     <>
       {parsedData !== null && <BubbleBackground />}
       <div style={{ padding: '10px' }}>
-        {parsedData !== null && <Title />}
         {parsedData === null ? (
           <FileUploadAndParse
             onParseComplete={handleParseComplete}
@@ -64,16 +63,17 @@ const App: React.FC = () => {
             onUploadError={handleUploadError}
           />
         ) : (
-          <>
-            {analysisResult && (
+          analysisResult && (
+            <div>
               <WordCloudComponent
                 analysisResult={analysisResult}
                 color1="#007bff"
                 color2="#28a745"
               />
-            )}
-            <MBTIAnalysis parsedData={parsedData} /> {/* Add the MBTIAnalysis component here */}
-          </>
+              <MBTIAnalysis parsedData={parsedData} />
+              <SentimentComponent />
+            </div>
+          )
         )}
       </div>
     </>
@@ -89,6 +89,7 @@ const styles = `
     border-left-color: #007bff;
     animation: spin 1s ease infinite;
   }
+
   @keyframes spin {
     0% {
       transform: rotate(0deg);

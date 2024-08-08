@@ -27,7 +27,6 @@ const getS3Client = async () => {
       throw new Error('Failed to get IdentityId')
     }
 
-
     const { Credentials } = await cognitoClient.send(
       new GetCredentialsForIdentityCommand({ IdentityId })
     )
@@ -35,7 +34,6 @@ const getS3Client = async () => {
     if (!Credentials) {
       throw new Error('Failed to get Credentials')
     }
-
 
     return new S3Client({
       region: REGION,
@@ -118,12 +116,14 @@ export const checkFileExists = async (hash: string): Promise<boolean> => {
 }
 
 export const uploadToS3 = async (file: File, hash: string): Promise<string> => {
-  //
+  console.log("uploading to s3")
   if (process.env.TESTING === '1') {
-    return Promise.resolve(hash)
+    console.log("did not upload because of testing")
+    return hash
   }
   const fileExists = await checkFileExists(hash)
   if (fileExists) {
+    console.log("did not upload because file exists")
     return hash
   }
 
@@ -138,8 +138,8 @@ export const uploadToS3 = async (file: File, hash: string): Promise<string> => {
         'original-filename': file.name,
       },
     })
-
     const response = await client.send(command)
+    console.log('S3 upload response:', response)
     return hash
   } catch (err) {
     console.error('Error uploading file to S3:', err)

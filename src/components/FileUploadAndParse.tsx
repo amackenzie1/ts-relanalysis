@@ -27,7 +27,7 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
   useEffect(() => {
     const runCognitoTest = async () => {
       try {
-        const identityId = await testCognitoCredentials()
+        await testCognitoCredentials()
       } catch (error) {
         console.error('Cognito credentials test failed:', error)
         setError(

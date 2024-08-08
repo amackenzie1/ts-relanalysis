@@ -5,8 +5,6 @@ interface AnalysisResult {
   person2: string
   topWords1: { text: string; value: number }[]
   topWords2: { text: string; value: number }[]
-  sentiment1: { week: string; sentiment: number }[]
-  sentiment2: { week: string; sentiment: number }[]
 }
 
 export const analyzeText = (messages: ChatMessage[]): AnalysisResult => {
@@ -64,7 +62,5 @@ export const analyzeText = (messages: ChatMessage[]): AnalysisResult => {
     person2,
     topWords1,
     topWords2,
-    sentiment1: [],
-    sentiment2: [],
   }
 }

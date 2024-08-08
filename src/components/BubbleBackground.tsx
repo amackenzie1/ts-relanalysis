@@ -1,44 +1,48 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react'
 
 const BubbleBackground: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    resizeCanvas()
+    window.addEventListener('resize', resizeCanvas)
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    let gradientShift = 0;
-
+    let gradientShift = 0
     const animate = () => {
-      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      gradient.addColorStop(0, `hsl(${(gradientShift + 260) % 360}, 50%, 65%)`); // Dark purple
-      gradient.addColorStop(.5, `hsl(${(gradientShift + 260) % 360}, 10%, 40%)`); // Neon green
-      gradient.addColorStop(1, `hsl(${(gradientShift + 260) % 360}, 50%, 40%)`); // Blue
+      const gradient = ctx.createLinearGradient(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      )
+      gradient.addColorStop(0, `hsl(${(gradientShift + 260) % 360}, 70%, 60%)`) // More saturated purple
+      gradient.addColorStop(
+        0.5,
+        `hsl(${(gradientShift + 320) % 360}, 80%, 50%)`
+      ) // Vibrant pink
+      gradient.addColorStop(1, `hsl(${(gradientShift + 200) % 360}, 70%, 50%)`) // Brighter blue
 
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      gradientShift += .2; // Adjust the speed of color transition
-
-      requestAnimationFrame(animate);
-    };
-
-    animate();
+      gradientShift += 0.2 // Adjust the speed of color transition
+      requestAnimationFrame(animate)
+    }
+    animate()
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
-    };
-  }, []);
+      window.removeEventListener('resize', resizeCanvas)
+    }
+  }, [])
 
   return (
     <canvas
@@ -50,7 +54,7 @@ const BubbleBackground: React.FC = () => {
         zIndex: -1,
       }}
     />
-  );
-};
+  )
+}
 
-export default BubbleBackground;
+export default BubbleBackground
