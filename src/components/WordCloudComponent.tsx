@@ -24,9 +24,9 @@ const IndividualWordCloud: React.FC<IndividualWordCloudProps> = ({
   color,
 }) => {
   const fontSizeMapper = (word: { value: number }) => {
-    return word.value * 2000 + 5
+    // return word.value * 2000 + 5
     // return Math.sqrt(word.value) * 300 + 5
-    // return Math.log(1 + 50 * word.value) * 80 + 5
+    return Math.log(1 + 50 * word.value) * 80 + 5
   }
 
   return (
