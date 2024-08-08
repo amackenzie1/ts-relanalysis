@@ -1,6 +1,7 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
 import WordCloud from 'react-d3-cloud';
 import axios from 'axios';
+import { ChatMessage } from '../utils/types';
 
 interface WordCloudComponentProps {
   analysisResult: {
@@ -13,12 +14,15 @@ interface WordCloudComponentProps {
   color2: string;
 }
 
-interface WordItem {
+interface Word {
   text: string;
   value: number;
-  ratio?: number;
-  normalizedValue?: number;
 }
+
+interface WordItem extends Word {
+  ratio: number;
+}
+
 
 const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
   ({ analysisResult, color1, color2 }) => {
@@ -27,114 +31,99 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
       topWords2: WordItem[];
     }>({ topWords1: [], topWords2: [] });
 
-    const cleanAndParseJSON = (text: string): any => {
-      const cleanedText = text.replace(/```json\n|\n```/g, '');
-      try {
-        return JSON.parse(cleanedText);
-      } catch (error) {
-        console.error('Error parsing cleaned JSON:', error);
-        console.log('Cleaned text that failed to parse:', cleanedText);
-        return null;
+    const createAdaptiveChunks = useCallback((words: WordItem[], chunkSize = 100): WordItem[][] => {
+      const chunks: WordItem[][] = [];
+      for (let i = 0; i < words.length; i += chunkSize) {
+        chunks.push(words.slice(i, i + chunkSize));
       }
+      return chunks;
+    }, []);
+
+    const createPrompt = useCallback((words: WordItem[]): string => {
+      return `Filter this list of words, removing insignificant entries such as conjunctions, variations of "ok", "k", or random numbers. Be very judicious in what words you remove. Nouns, Verbs and adjectives should almost always be kept. Slang that lends personality to the person should also be kept. In the end any word that seems unique to that person in the chat should NOT BE REMOVED. Keep the original ratios and values for the words you retain. Format the output as a JSON array of objects with "text", "value", and "ratio" properties.
+
+      Words: ${JSON.stringify(words)}`;
+    }, []);
+
+    const cleanJSONResponse = (response: string): string => {
+      return response.replace(/```json\s*|\s*```/g, '').trim();
     };
 
+    const processChunks = useCallback(async (chunks: WordItem[][], apiKey: string): Promise<WordItem[]> => {
+      const chunkResults = await Promise.all(chunks.map(async (chunk, index) => {
+        const prompt = createPrompt(chunk);
+        try {
+          console.log(`Processing chunk ${index + 1}/${chunks.length}`);
+          const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0
+          }, {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          const cleanedContent = cleanJSONResponse(response.data.choices[0].message.content);
+          const parsedResult = JSON.parse(cleanedContent);
+          console.log(`Chunk ${index + 1} processed successfully`);
+          return parsedResult;
+        } catch (error) {
+          console.error(`Error processing chunk ${index + 1}:`, error);
+          return [];
+        }
+      }));
+
+      const flattenedResults = chunkResults.flat();
+      console.log('All chunks processed. Total words after filtering:', flattenedResults.length);
+      return flattenedResults;
+    }, [createPrompt]);
+
     useEffect(() => {
-      const filterWordsWithGPT = async () => {
+      const performAnalysis = async () => {
+        console.log('Starting word cloud analysis');
         const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
         if (!apiKey) {
           console.error('OpenAI API key is not defined');
           return;
         }
 
-        // Create a map of words to their counts for each person
-        const wordMap1 = new Map(analysisResult.topWords1.map(w => [w.text, w.value]));
-        const wordMap2 = new Map(analysisResult.topWords2.map(w => [w.text, w.value]));
+        const wordRatios: WordItem[] = [...analysisResult.topWords1, ...analysisResult.topWords2].map(word => ({
+          ...word,
+          ratio: (analysisResult.topWords1.find(w => w.text === word.text)?.value || 0 + 1) /
+                 (analysisResult.topWords2.find(w => w.text === word.text)?.value || 0 + 1)
+        }));
 
-        // Calculate ratios
-        const allWords = new Set([...wordMap1.keys(), ...wordMap2.keys()]);
-        const wordRatios: WordItem[] = Array.from(allWords).map(word => {
-          const count1 = wordMap1.get(word) || 0;
-          const count2 = wordMap2.get(word) || 0;
-          const ratio = (count1 + 1) / (count2 + 1);
-          return { text: word, value: Math.max(count1, count2), ratio };
-        });
+        console.log('Initial word count:', wordRatios.length);
+        wordRatios.sort((a, b) => b.ratio - a.ratio);
+        const chunks = createAdaptiveChunks(wordRatios);
+        console.log('Number of chunks created:', chunks.length);
 
-        // Sort by ratio and get top and bottom 100
-        wordRatios.sort((a, b) => b.ratio! - a.ratio!);
-        const topBottom100 = [...wordRatios.slice(0, 100), ...wordRatios.slice(-100)];
+        const filteredWords = await processChunks(chunks, apiKey);
 
-        try {
-          const response = await axios.post(
-            'https://api.openai.com/v1/chat/completions',
-            {
-              model: 'gpt-4o-mini',
-              messages: [
-                {
-                  role: 'system',
-                  content: 'You are a helpful assistant that filters and refines word lists for word clouds. Respond with only the JSON output, no additional text.'
-                },
-                {
-                  role: 'user',
-                  content: `Please filter this list of words, removing insignificant entries such as conjunctions, variations of "ok", "k", or random numbers. Return only words that are somewhat unique (names are ok). Keep the original ratios for the words you retain. Format the output as a JSON array of objects with "text" and "ratio" properties.
+        const topWords1 = filteredWords.filter(w => w.ratio > 1).slice(0, 50);
+        const topWords2 = filteredWords.filter(w => w.ratio <= 1).slice(-50).map(w => ({ ...w, ratio: 1 / w.ratio }));
 
-                  Words: ${JSON.stringify(topBottom100)}`
-                }
-              ],
-              temperature: 0,
-            },
-            {
-              headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
+        console.log('Final word counts - Person 1:', topWords1.length, 'Person 2:', topWords2.length);
+        console.log('Top 10 words for Person 1:', topWords1.slice(0, 10));
+        console.log('Top 10 words for Person 2:', topWords2.slice(0, 10));
 
-          const cleanedResponse = cleanAndParseJSON(response.data.choices[0].message.content) as WordItem[];
-          if (!cleanedResponse) {
-            throw new Error('Failed to parse GPT response');
-          }
-
-          // Sort filtered words by ratio
-          cleanedResponse.sort((a, b) => b.ratio! - a.ratio!);
-
-          // Select top 50 for person1 and bottom 50 for person2
-          const topWords1 = cleanedResponse.slice(0, 50);
-          const topWords2 = cleanedResponse.slice(-50).map((word: WordItem) => ({
-            ...word,
-            ratio: 1 / word.ratio! // Invert ratio for person2
-          }));
-
-          setFilteredWords({ topWords1, topWords2 });
-
-          console.log("Filtered Word Lists:");
-          console.log("Person 1:", topWords1);
-          console.log("Person 2:", topWords2);
-
-          // Log the filtered out words
-          const filteredOutWords = topBottom100.filter(word => !cleanedResponse.find((w: WordItem) => w.text === word.text));
-          console.log("Filtered out words:", filteredOutWords);
-
-        } catch (error) {
-          console.error('Error filtering words with GPT:', error);
-          setFilteredWords({
-            topWords1: analysisResult.topWords1.slice(0, 50),
-            topWords2: analysisResult.topWords2.slice(0, 50)
-          });
-        }
+        setFilteredWords({ topWords1, topWords2 });
+        console.log('Word cloud analysis completed');
       };
 
-      filterWordsWithGPT();
-    }, [analysisResult]);
+      performAnalysis();
+    }, [analysisResult, createAdaptiveChunks, processChunks]);
 
     const normalizedWords = useMemo(() => {
-      const normalizeSet = (words: WordItem[]) => {
-        const ratios = words.map(w => w.ratio!);
+      const normalizeSet = (words: WordItem[]): Word[] => {
+        const ratios = words.map(w => w.ratio);
         const minRatio = Math.min(...ratios);
         const maxRatio = Math.max(...ratios);
         return words.map(word => ({
-          ...word,
-          normalizedValue: (word.ratio! - minRatio) / (maxRatio - minRatio)
+          text: word.text,
+          value: (word.ratio - minRatio) / (maxRatio - minRatio)
         }));
       };
 
@@ -144,60 +133,34 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
       };
     }, [filteredWords]);
 
-    const fontSizeMapper = (word: WordItem) => {
-      return Math.sqrt(word.normalizedValue || 0) * 80 + 16;
-    };
+    const fontSizeMapper = useCallback((word: Word) => {
+      return Math.sqrt(word.value) * 80 + 16;
+    }, []);
 
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          margin: '20px 0',
-        }}
-      >
-        <div style={{ minWidth: '48%', margin: '10px' }}>
-          <h3 style={{ textAlign: 'center', color: '#555' }}>
-            {analysisResult.person1}'s Top Words
-          </h3>
-          <div
-            style={{
+      <div style={{ display: 'flex', justifyContent: 'space-between', margin: '20px 0' }}>
+        {[
+          { person: analysisResult.person1, words: normalizedWords.topWords1, color: color1 },
+          { person: analysisResult.person2, words: normalizedWords.topWords2, color: color2 }
+        ].map(({ person, words, color }) => (
+          <div key={person} style={{ minWidth: '48%', margin: '10px' }}>
+            <h3 style={{ textAlign: 'center', color: '#555' }}>{person}'s Top Words</h3>
+            <div style={{
               width: '100%',
-              border: `2px solid ${color1}`,
+              border: `2px solid ${color}`,
               borderRadius: '8px',
               padding: '2px',
               boxSizing: 'border-box',
-            }}
-          >
-            <WordCloud
-              data={normalizedWords.topWords1}
-              fontSize={fontSizeMapper}
-              rotate={0}
-              padding={2}
-            />
+            }}>
+              <WordCloud
+                data={words}
+                fontSize={fontSizeMapper}
+                rotate={0}
+                padding={2}
+              />
+            </div>
           </div>
-        </div>
-        <div style={{ minWidth: '48%', margin: '10px' }}>
-          <h3 style={{ textAlign: 'center', color: '#555' }}>
-            {analysisResult.person2}'s Top Words
-          </h3>
-          <div
-            style={{
-              width: '100%',
-              border: `2px solid ${color2}`,
-              borderRadius: '8px',
-              padding: '2px',
-              boxSizing: 'border-box',
-            }}
-          >
-            <WordCloud
-              data={normalizedWords.topWords2}
-              fontSize={fontSizeMapper}
-              rotate={0}
-              padding={2}
-            />
-          </div>
-        </div>
+        ))}
       </div>
     );
   }
