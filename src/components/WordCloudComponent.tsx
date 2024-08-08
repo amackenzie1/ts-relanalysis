@@ -15,7 +15,8 @@ interface WordCloudComponentProps {
 const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
   ({ analysisResult, color1, color2 }) => {
     const fontSizeMapper = (word: { value: number }) =>
-      Math.log2(1 + word.value * 600) * 14 + 2
+      word.value * 2000 + 5
+      
 
     const normalizedWords = useMemo(() => {
       const total1 = analysisResult.topWords1.reduce(
