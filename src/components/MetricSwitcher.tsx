@@ -21,14 +21,17 @@ const parseDuration = (durationStr: string): number => {
 }
 
 const formatDuration = (totalSeconds: number): string => {
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
-    2,
-    '0'
-  )}:${String(seconds).padStart(2, '0')}`
-}
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+  
+    const hoursDisplay = hours > 0 ? `${hours} hour${hours !== 1 ? 's' : ''}` : '';
+    const minutesDisplay = minutes > 0 ? `${minutes} minute${minutes !== 1 ? 's' : ''}` : '';
+    const secondsDisplay = seconds > 0 ? `${seconds} second${seconds !== 1 ? 's' : ''}` : '';
+  
+    return [hoursDisplay, minutesDisplay, secondsDisplay].filter(Boolean).join(', ');
+  };
+  
 
 const videoCallPatterns = [
   /video call.*?(\d+\s*(?:hr|min|sec))/i,
@@ -156,47 +159,47 @@ const MetricSwitcher: React.FC<MetricSwitcherProps> = ({ chatData }) => {
   }, [calculateMostCommonMessages])
 
   const calculateCallTimes = useMemo(() => {
-    let videoCallSeconds = 0
-    let voiceCallSeconds = 0
-    let missedCalls = 0
-    const missedCallMessages: string[] = []
-
+    let videoCallSeconds = 0;
+    let voiceCallSeconds = 0;
+    let missedCalls = 0;
+    const missedCallMessages: string[] = [];
+  
     chatData.forEach((message) => {
-      const content = message.message
-
+      const content = message.message;
+  
       for (const pattern of videoCallPatterns) {
-        const match = content.match(pattern)
+        const match = content.match(pattern);
         if (match) {
-          videoCallSeconds += parseDuration(match[1])
-          break
+          videoCallSeconds += parseDuration(match[1]);
+          break;
         }
       }
-
+  
       for (const pattern of voiceCallPatterns) {
-        const match = content.match(pattern)
+        const match = content.match(pattern);
         if (match) {
-          voiceCallSeconds += parseDuration(match[1])
-          break
+          voiceCallSeconds += parseDuration(match[1]);
+          break;
         }
       }
-
+  
       for (const pattern of missedCallPatterns) {
         if (pattern.test(content)) {
-          missedCalls++
-          missedCallMessages.push(content)
-          break
+          missedCalls++;
+          missedCallMessages.push(content);
+          break;
         }
       }
-    })
-
-    setPotentialMissedCalls(missedCallMessages)
-
+    });
+  
+    setPotentialMissedCalls(missedCallMessages);
+  
     return {
       videoCallTime: formatDuration(videoCallSeconds),
       voiceCallTime: formatDuration(voiceCallSeconds),
       missedCalls,
-    }
-  }, [chatData])
+    };
+  }, [chatData]);
 
   useEffect(() => {
     const identifyUnknownCallTypes = async () => {
@@ -255,10 +258,10 @@ const MetricSwitcher: React.FC<MetricSwitcherProps> = ({ chatData }) => {
   const metrics = useMemo(() => {
     if (filteredCommonMessages.length > 0) {
       return [
-        `You spent ${calculateCallTimes.videoCallTime} Video Calling`,
-        `You spent ${calculateCallTimes.voiceCallTime} on the Phone`,
-        `You missed ${calculateCallTimes.missedCalls} Calls :( `,
-        `You said "${filteredCommonMessages[0][0]}" ${filteredCommonMessages[0][1]} times!`,
+        `You spent ${calculateCallTimes.videoCallTime} Video Calling 🌚`,
+        `You spent ${calculateCallTimes.voiceCallTime} on the Phone 🥰`,
+        `You missed ${calculateCallTimes.missedCalls} Calls 😢 `,
+        `You said "${filteredCommonMessages[0][0]}" ${filteredCommonMessages[0][1]} times!!!🤯🎉 `,
       ]
     } else {
       return [

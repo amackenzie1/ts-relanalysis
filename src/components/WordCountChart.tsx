@@ -59,7 +59,7 @@ const WordCountChart: React.FC<WordCountChartProps> = ({ parsedData }) => {
       style={{ width: '100%', height: '400px', paddingBottom: '80px' }}
     >
       <h2 className="text-2xl font-bold mb-4">
-        Word Count Per Person by Month
+        Engagement Chart
       </h2>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart

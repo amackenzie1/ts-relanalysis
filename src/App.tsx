@@ -4,6 +4,7 @@ import FileUploadAndParse from './components/FileUploadAndParse'
 import MBTIAnalysis from './components/MBTIAnalysis'
 import MetricSwitcher from './components/MetricSwitcher'
 import SentimentChart from './components/SentimentChart'
+import SophisticationScore from './components/SophisticationScore' // Import the new component
 import Title from './components/Title'
 import WordCloudComponent from './components/WordCloudComponent'
 import WordCountChart from './components/WordCountChart'
@@ -79,7 +80,7 @@ const App: React.FC = () => {
             <MBTIAnalysis parsedData={parsedData} />
             <WordCountChart parsedData={parsedData} />
             <SentimentChart parsedData={parsedData} />
-            {/* Add the new component here */}
+            <SophisticationScore chatData={parsedData} /> {/* Add the new component here */}
           </>
         )}
       </div>
