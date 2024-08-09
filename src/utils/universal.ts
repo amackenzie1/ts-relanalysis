@@ -94,6 +94,8 @@ async function parse(chatText: string): Promise<ChatMessage[]> {
     console.log('LLM response:', llmResponse)
     pattern = llmResponse.regex_pattern
   }
+  console.log('Using pattern:', pattern)
+  console.log('Chat text:', chatText)
 
   const matches = chatText.matchAll(new RegExp(pattern, 'gm'))
   console.log('Matches:', matches)
@@ -102,11 +104,15 @@ async function parse(chatText: string): Promise<ChatMessage[]> {
   for (const match of matches) {
     if (match.groups) {
       const { timestamp, user, message } = match.groups
-      parsedData.push({
-        user,
-        message: clean(message),
-        date: chronoparse(timestamp)[0].start.date(),
-      })
+      try {
+        parsedData.push({
+          user,
+          message: clean(message),
+          date: chronoparse(timestamp)[0].start.date(),
+        })
+      } catch (error) {
+        console.error('Error parsing timestamp: ', timestamp, error)
+      }
     }
   }
   console.log('Parsed chat data:', parsedData)

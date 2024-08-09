@@ -53,6 +53,8 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
       const text = await file.text()
       const parsedData = await parse(text)
 
+      console.log(parsedData)
+
       // Notify parent that parsing is complete
       onParseComplete(parsedData)
 
