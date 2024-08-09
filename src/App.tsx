@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import BubbleBackground from './components/BubbleBackground'
 import FileUploadAndParse from './components/FileUploadAndParse'
 import MBTIAnalysis from './components/MBTIAnalysis'
+import MetricSwitcher from './components/MetricSwitcher'
 import Title from './components/Title'
 import WordCloudComponent from './components/WordCloudComponent'
 import WordCountChart from './components/WordCountChart'
@@ -66,6 +67,7 @@ const App: React.FC = () => {
           />
         ) : (
           <>
+            <MetricSwitcher chatData={parsedData} />
             {analysisResult && (
               <WordCloudComponent
                 analysisResult={analysisResult}
