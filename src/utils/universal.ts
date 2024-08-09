@@ -1,3 +1,4 @@
+import { parse as chronoparse } from 'chrono-node'
 import { OpenAI } from 'openai'
 import { zodResponseFormat } from 'openai/helpers/zod'
 import { z } from 'zod'
@@ -104,7 +105,7 @@ async function parse(chatText: string): Promise<ChatMessage[]> {
       parsedData.push({
         user,
         message: clean(message),
-        date: new Date(timestamp),
+        date: chronoparse(timestamp)[0].start.date(),
       })
     }
   }
