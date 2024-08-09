@@ -1,41 +1,41 @@
-import React, { useMemo, useState } from 'react';
-import FileUploadAndParse from './components/FileUploadAndParse';
-import WordCloudComponent from './components/WordCloudComponent';
-import MBTIAnalysis from './components/MBTIAnalysis';
-import BubbleBackground from './components/BubbleBackground';
-import WordCountChart from './components/WordCountChart' 
-import Title from './components/Title';
-import { analyzeText } from './utils/textAnalysis';
-import { ChatMessage } from './utils/types';
+import React, { useMemo, useState } from 'react'
+import BubbleBackground from './components/BubbleBackground'
+import FileUploadAndParse from './components/FileUploadAndParse'
+import MBTIAnalysis from './components/MBTIAnalysis'
+import Title from './components/Title'
+import WordCloudComponent from './components/WordCloudComponent'
+import WordCountChart from './components/WordCountChart'
+import { analyzeText } from './utils/textAnalysis'
+import { ChatMessage } from './utils/types'
 
 const App: React.FC = () => {
-  const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
 
   const analysisResult = useMemo(() => {
     if (parsedData) {
-      return analyzeText(parsedData);
+      return analyzeText(parsedData)
     }
-    return null;
-  }, [parsedData]);
+    return null
+  }, [parsedData])
 
   const handleParseComplete = (data: ChatMessage[]) => {
-    setParsedData(data);
-    setIsLoading(false);
-  };
+    setParsedData(data)
+    setIsLoading(false)
+  }
 
   const handleUploadStart = () => {
-    setUploadStatus('Uploading to S3...');
-  };
+    setUploadStatus('Uploading to S3...')
+  }
 
   const handleUploadComplete = (hash: string) => {
-    setUploadStatus(`File uploaded successfully: ${hash}`);
-  };
+    setUploadStatus(`File uploaded successfully: ${hash}`)
+  }
 
   const handleUploadError = (error: Error) => {
-    setUploadStatus(`Upload failed: ${error.message}`);
-  };
+    setUploadStatus(`Upload failed: ${error.message}`)
+  }
 
   if (isLoading) {
     return (
@@ -49,7 +49,7 @@ const App: React.FC = () => {
       >
         <div className="spinner" />
       </div>
-    );
+    )
   }
 
   return (
@@ -74,7 +74,8 @@ const App: React.FC = () => {
               />
             )}
             <MBTIAnalysis parsedData={parsedData} />
-            <WordCountChart parsedData={parsedData} />  {/* Add the new component here */}
+            <WordCountChart parsedData={parsedData} />{' '}
+            {/* Add the new component here */}
           </>
         )}
       </div>
@@ -113,6 +114,6 @@ const AppWithStyles = () => (
     <style>{styles}</style>
     <App />
   </>
-);
+)
 
-export default AppWithStyles;
+export default AppWithStyles
