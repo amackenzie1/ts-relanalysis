@@ -29,10 +29,17 @@ const SalientEvent = z.object({
   salience: z.number(),
 })
 
+const Quote = z.object({
+  user: z.string(),
+  quote: z.string(),
+  type: z.string(),
+})
+
 const SentimentResponse = z.object({
   user1_sentiment: z.number(),
   user2_sentiment: z.number(),
   salient_events: z.array(SalientEvent),
+  top_quotes: z.array(Quote),
 })
 
 type SentimentResponseType = z.infer<typeof SentimentResponse>
@@ -63,11 +70,16 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
     persons: string[]
   ): Promise<SentimentResponseType> => {
     const prompt = `
-      Analyze the sentiment of the following chat messages for each user. 
+      Firstly:
       Rate the sentiment on a scale from -10 (extremely negative) to 10 (extremely positive).
       Also, identify important [influencing the sentiment] events or topics from the conversation, and rate their salience on a scale from 0 to 10. 0 is completely irrelevant, 10 is a dramatic life change, like getting married, 5 is like a party.
       Aim to include events with a salience of 5 or higher. This might be a completely different number of events depending on the week.
-      Finally, note that this is targeted at the users themselves, so assume they have all the context and make your responses match their style. Basically they just need to be reminded of what happened. You're talking to them directly. Be casual.
+      Finally, note that this is targeted at the users themselves, so assume they have all the context and make your responses match their style. Basically they just need to be reminded of what happened. You're talking to them directly. Be casual. 
+      
+      Secondly:
+      Select the top 2 quotes from each user that are either completely unhinged or incredibly sweet and heartwarming. These should be specific to the users' dynamic.
+      NOTE! The quotes are totally unrelated to the sentiment analysis subjects. Literally just find the craziest/funniest/stupidest/most attention-grabbing things these people said.
+
       Chat transcript:
       ${weekMessages.map((m) => `${m.user}: ${m.message}`).join('\n')}
 
@@ -81,6 +93,13 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
             "salience": number
           },
           ...
+        ],
+        "top_quotes": [
+          {
+            "user": "user1 or user2",
+            "quote": "The actual quote",
+          },
+          ... (4 quotes total, 2 for each user)
         ]
       }
     `
@@ -171,41 +190,91 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
         <div
           style={{
             backgroundColor: 'white',
-            padding: '10px',
+            padding: '15px',
             border: '1px solid #ccc',
-            borderRadius: '4px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            fontSize: '12px',
-            maxWidth: '250px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            fontSize: '14px',
+            width: '500px',
+            display: 'flex',
           }}
         >
-          <p
-            style={{ fontWeight: 'bold', marginBottom: '5px' }}
-          >{`Week of ${format(new Date(label), 'MMM d, yyyy')}`}</p>
-          <p
-            style={{ margin: '2px 0', color: user1Color }}
-          >{`${user1}: ${data.user1_sentiment.toFixed(2)}`}</p>
-          <p
-            style={{ margin: '2px 0', color: user2Color }}
-          >{`${user2}: ${data.user2_sentiment.toFixed(2)}`}</p>
-          <p
+          <div
             style={{
-              fontWeight: 'bold',
-              marginTop: '5px',
-              marginBottom: '3px',
+              flex: 1,
+              borderRight: '1px solid #ccc',
+              paddingRight: '15px',
             }}
           >
-            Salient Events:
-          </p>
-          <ul
-            style={{ listStyleType: 'disc', paddingLeft: '20px', margin: '0' }}
-          >
-            {data.salient_events.map((event: any, index: number) => (
-              <li key={index} style={{ margin: '2px 0' }}>
-                {event.event}
-              </li>
+            <p
+              style={{
+                fontWeight: 'bold',
+                marginBottom: '10px',
+                fontSize: '16px',
+              }}
+            >{`Week of ${format(new Date(label), 'MMM d, yyyy')}`}</p>
+            <p
+              style={{ margin: '5px 0', color: user1Color }}
+            >{`${user1}: ${data.user1_sentiment.toFixed(2)}`}</p>
+            <p
+              style={{ margin: '5px 0', color: user2Color }}
+            >{`${user2}: ${data.user2_sentiment.toFixed(2)}`}</p>
+            <p
+              style={{
+                fontWeight: 'bold',
+                marginTop: '10px',
+                marginBottom: '5px',
+              }}
+            >
+              Salient Events:
+            </p>
+            <ul
+              style={{
+                listStyleType: 'disc',
+                paddingLeft: '20px',
+                margin: '0',
+              }}
+            >
+              {data.salient_events.map((event: any, index: number) => (
+                <li key={index} style={{ margin: '3px 0' }}>
+                  {event.event}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div style={{ flex: 1, paddingLeft: '15px' }}>
+            <p
+              style={{
+                fontWeight: 'bold',
+                marginBottom: '10px',
+                fontSize: '16px',
+              }}
+            >
+              Top Quotes:
+            </p>
+            {data.top_quotes.map((quote: any, index: number) => (
+              <div key={index} style={{ marginBottom: '10px' }}>
+                <p
+                  style={{
+                    fontWeight: 'bold',
+                    color: quote.user === user1 ? user1Color : user2Color,
+                    marginBottom: '3px',
+                  }}
+                >
+                  {quote.user}
+                </p>
+                <p
+                  style={{
+                    fontStyle: 'italic',
+                    padding: '5px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  "{quote.quote}"
+                </p>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )
     }
