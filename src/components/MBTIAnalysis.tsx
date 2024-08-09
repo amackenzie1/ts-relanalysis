@@ -33,10 +33,45 @@ const MBTIAnalysis: React.FC<MBTIAnalysisProps> = ({ parsedData }) => {
       if (!apiKey) {
         throw new Error('OpenAI API key is not defined');
       }
+      // Log total number of messages and messages per user
+      console.log('Total number of messages:', parsedData.length);
+      const messagesPerUser = parsedData.reduce((acc, msg) => {
+        acc[msg.user] = (acc[msg.user] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('Messages per user:', messagesPerUser);
+
+      // Log total number of words per user
+      const wordsPerUser = parsedData.reduce((acc, msg) => {
+        const wordCount = msg.message.split(/\s+/).length;
+        acc[msg.user] = (acc[msg.user] || 0) + wordCount;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('Words per user:', wordsPerUser);
+
+      // Log a sample message from each user
+      const sampleMessages = Object.keys(messagesPerUser).reduce((acc, user) => {
+        const sampleMessage = parsedData.find(msg => msg.user === user);
+        if (sampleMessage) {
+          acc[user] = sampleMessage.message;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+      console.log('Sample message from each user:', sampleMessages);
+
       const chunks = createAdaptiveChunks(parsedData);
+      console.log('Number of chunks:', chunks.length);
+
       const predictions = await processChunks(chunks, apiKey);
       const result = await calculateFinalPredictions(predictions, apiKey);
       setAnalysis({ ...result, chunkCount: chunks.length });
+
+      // Log MBTI letter counts
+      Object.entries(result.finalPredictions).forEach(([user, mbtiType]) => {
+        const letterCounts = countMbtiLetters([mbtiType]);
+        console.log(`MBTI letter counts for ${user}:`, letterCounts);
+      });
+
     } catch (err) {
       setError('An error occurred during analysis. Please try again.');
       console.error(err);
@@ -139,10 +174,13 @@ const MBTIAnalysis: React.FC<MBTIAnalysisProps> = ({ parsedData }) => {
       finalPredictions[participant] = mbtiType;
       significances[participant] = significance;
       
-      // Get GPT description for the MBTI type
-      gptDescriptions[participant] = await getGPTDescription(mbtiType, apiKey);
+      // Get GPT description for the MBTI type, now including the participant's name
+      gptDescriptions[participant] = await getGPTDescription(mbtiType, participant, apiKey);
     }
-
+  
+    console.log('Final MBTI predictions:', finalPredictions);
+    console.log('MBTI significances:', significances);
+  
     return { finalPredictions, significances, gptDescriptions };
   };
 
@@ -181,19 +219,22 @@ const MBTIAnalysis: React.FC<MBTIAnalysisProps> = ({ parsedData }) => {
     return [finalMbti, significance];
   };
 
-  const getGPTDescription = async (mbtiType: string, apiKey: string): Promise<string> => {
+  const getGPTDescription = async (mbtiType: string, username: string, apiKey: string): Promise<string> => {
     try {
       const response = await axios.post('https://api.openai.com/v1/chat/completions', {
         model: "gpt-4o-mini",
-        messages: [{ role: "user", content: `Provide a brief, insightful description of the ${mbtiType} personality type, including key traits, strengths, and potential weaknesses. Limit to 3-4 sentences.` }],
-        temperature: 0.7
+        messages: [{ 
+          role: "user", 
+          content: `Provide a brief, funny but insightful description of the ${mbtiType} personality type for a person named ${username}, including key traits, strengths, and potential weaknesses. This should be somewhat humorous (lean a bit dark but don't say anything too inappropriate) but also accurate. Use ${username}'s name in the output. Limit the response to 3-4 sentences.` 
+        }],
+        temperature: 0.2
       }, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         }
       });
-
+  
       return response.data.choices[0].message.content;
     } catch (error) {
       console.error('Error fetching GPT description:', error);
@@ -326,8 +367,8 @@ const MBTIAnalysis: React.FC<MBTIAnalysisProps> = ({ parsedData }) => {
               </div>
             </div>
             <div className="bg-white p-4 rounded shadow-sm">
-              <h4 className="text-lg font-medium mb-2">GPT-Generated Description</h4>
-              <p>{analysis.gptDescriptions[participant] || "Unable to generate description."}</p>
+              <h4 className="text-lg font-medium mb-2">Personality Profile</h4>
+              <p>{analysis.gptDescriptions[participant] || "Unable to generate profile."}</p>
             </div>
           </div>
         ))}

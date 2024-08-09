@@ -8,7 +8,7 @@ const Title = () => {
         <span
           style={{
             fontWeight: '800',
-            background: 'linear-gradient(to right, #3B82F6, #00C4FF)',
+            background: 'linear-gradient(to right, #3B82F6, #00C4FF, #60A5FA)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
