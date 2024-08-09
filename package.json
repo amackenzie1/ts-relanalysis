@@ -19,6 +19,7 @@
     "chrono-node": "^2.7.6",
     "crypto-js": "^4.2.0",
     "d3-cloud": "^1.2.7",
+    "date-fns": "^3.6.0",
     "lucide-react": "^0.424.0",
     "openai": "^4.55.0",
     "react": "^18.3.1",

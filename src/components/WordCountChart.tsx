@@ -1,3 +1,4 @@
+import { format } from 'date-fns'
 import React, { useMemo } from 'react'
 import {
   CartesianGrid,
@@ -18,38 +19,30 @@ interface WordCountChartProps {
 const WordCountChart: React.FC<WordCountChartProps> = ({ parsedData }) => {
   const chartData = useMemo(() => {
     const counters: { [key: string]: { [key: string]: number } } = {}
-    let personA: string | null = null
-    let personB: string | null = null
+    const persons: Set<string> = new Set()
 
-    // First pass: count words and identify persons
     parsedData.forEach((message) => {
-      const date = new Date(message.date)
-      const month = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-      ).padStart(2, '0')}`
+      const monthYear = format(message.date, 'yyyy-MM')
       const wordCount = message.message.split(/\s+/).length
 
-      if (!personA) {
-        personA = message.user
-      } else if (!personB && message.user !== personA) {
-        personB = message.user
-      }
+      persons.add(message.user)
 
-      if (!counters[month]) {
-        counters[month] = { [personA!]: 0, [personB!]: 0 }
+      if (!counters[monthYear]) {
+        counters[monthYear] = {}
       }
-      counters[month][message.user] += wordCount
+      counters[monthYear][message.user] =
+        (counters[monthYear][message.user] || 0) + wordCount
     })
 
-    // Sort the months
     const sortedMonths = Object.keys(counters).sort()
 
-    // Create the final data array
-    const filledData = sortedMonths.map((month) => ({
-      month,
-      [personA!]: counters[month][personA!] || 0,
-      [personB!]: counters[month][personB!] || 0,
-    }))
+    const filledData = sortedMonths.map((monthYear) => {
+      const monthData: any = { monthYear }
+      persons.forEach((person) => {
+        monthData[person] = counters[monthYear][person] || 0
+      })
+      return monthData
+    })
 
     return filledData
   }, [parsedData])
@@ -58,12 +51,7 @@ const WordCountChart: React.FC<WordCountChartProps> = ({ parsedData }) => {
     return <div>No data available for the chart.</div>
   }
 
-  const personA = Object.keys(chartData[0]).find(
-    (key) => key !== 'month' && key !== 'B'
-  )
-  const personB = Object.keys(chartData[0]).find(
-    (key) => key !== 'month' && key !== personA
-  )
+  const persons = Object.keys(chartData[0]).filter((key) => key !== 'monthYear')
 
   return (
     <div
@@ -84,22 +72,19 @@ const WordCountChart: React.FC<WordCountChartProps> = ({ parsedData }) => {
           }}
         >
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
+          <XAxis dataKey="monthYear" />
           <YAxis />
           <Tooltip />
           <Legend />
-          <Line
-            type="monotone"
-            dataKey={personA!}
-            stroke="#8884d8"
-            activeDot={{ r: 8 }}
-          />
-          <Line
-            type="monotone"
-            dataKey={personB!}
-            stroke="#82ca9d"
-            activeDot={{ r: 8 }}
-          />
+          {persons.map((person, index) => (
+            <Line
+              key={person}
+              type="monotone"
+              dataKey={person}
+              stroke={index === 0 ? '#8884d8' : '#82ca9d'}
+              activeDot={{ r: 8 }}
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>
