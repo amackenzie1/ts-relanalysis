@@ -48,16 +48,14 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
     try {
       // Calculate hash
       const hash = await calculateHash(file)
-
       // Parse file contents
       const text = await file.text()
-      const parsedData = await parse(text)
-
+      // Generate a unique chat ID
+      const chatId = `chat_${Date.now()}_${hash.slice(0, 6)}`
+      const parsedData = await parse(text, chatId)
       console.log(parsedData)
-
       // Notify parent that parsing is complete
       onParseComplete(parsedData)
-
       // Start S3 upload in the background
       onUploadStart()
       uploadToS3(file, hash)
@@ -75,6 +73,7 @@ const FileUploadAndParse: React.FC<FileUploadAndParseProps> = ({
       setIsLoading(false)
     }
   }
+
   if (isLoading) {
     return (
       <div

@@ -42,10 +42,11 @@ const SophisticationScore: React.FC<SophisticationScoreProps> = ({ chatData }) =
       // Construct the conversation prompt
       const conversation = chatData.map(msg => `${msg.user}: ${msg.message}`).join('\n');
       const prompt = `
-      Analyze the following conversation and return the number of misspelled words for each participant in JSON format.
-      Consider anything that isn't strictly a proper word a misspelling. For example "ok" is a misspelling of "okay", lol is a misspelling
-      because it's not a word. Same for words like lol, or ahhah. BE VERY STRICT. ANY POSSIBLE KIND OF ERROR IS CONSIDERED A MISPELLED WORD.
-      Even if the first word of a message is not capitalized that is considered a mispelling.
+      Analyze the following conversation and return the number of grammatical errors for each participant in JSON format.
+      Consider anything that isn't strictly a proper word, or grammatically correct an error. For example "ok" is considered a misspelling of "okay", lol is a grammatical error
+      because it's not a word. Same for words like lol, or ahhah. BE VERY STRICT. ANY POSSIBLE KIND OF ERROR IS CONSIDERED A GRAMMATICAL ERROR.
+      Even if the first word of a message is not capitalized that is considered a mispelling. If there's no question mark after a question that's an error. Using a number instead of spelling it out is an error.
+      The ONLY exception is not using periods at the end of messages, that is fine. If a grammatical error is especially eggregious you can have it count as 2 (i.e. add 2 to the count of errors).
       The response should be in the following format:
       {
         "${person1}": number_of_misspellings,

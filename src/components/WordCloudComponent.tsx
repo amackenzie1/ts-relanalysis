@@ -22,6 +22,9 @@ interface WordItem extends Word {
   ratio: number
 }
 
+// Simple in-memory cache
+const cache: { [key: string]: string[] } = {}
+
 const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
   ({ analysisResult, color1, color2 }) => {
     const [filteredWords, setFilteredWords] = useState<{
@@ -48,6 +51,12 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
 
     const processChunk = useCallback(
       async (chunk: string[], apiKey: string): Promise<string[]> => {
+        const cacheKey = chunk.join(',')
+        if (cache[cacheKey]) {
+          console.log('Cache hit for chunk')
+          return cache[cacheKey]
+        }
+
         const prompt = createPrompt(chunk)
         try {
           const response = await axios.post(
@@ -64,7 +73,9 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
               },
             }
           )
-          return response.data.choices[0].message.content.trim().split(' ')
+          const result = response.data.choices[0].message.content.trim().split(' ')
+          cache[cacheKey] = result
+          return result
         } catch (error) {
           console.error('Error processing chunk:', error)
           return []
@@ -80,64 +91,68 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
       []
     )
 
-    useEffect(() => {
-      const performAnalysis = async () => {
-        console.log('Starting word cloud analysis')
-        const apiKey = process.env.REACT_APP_OPENAI_API_KEY
-        if (!apiKey) {
-          console.error('OpenAI API key is not defined')
-          return
-        }
-
-        const wordRatios: WordItem[] = [
-          ...analysisResult.topWords1,
-          ...analysisResult.topWords2,
-        ].map((word) => ({
-          ...word,
-          ratio:
-            (analysisResult.topWords1.find((w) => w.text === word.text)
-              ?.value || 0 + 1) /
-            (analysisResult.topWords2.find((w) => w.text === word.text)
-              ?.value || 0 + 1),
-        }))
-
-        const allWords = wordRatios.map((w) => w.text)
-        const chunks = createAdaptiveChunks(allWords)
-        console.log('Number of chunks:', chunks.length)
-
-        const processedChunks = await Promise.all(
-          chunks.map((chunk, index) =>
-            processChunk(chunk, apiKey).then((result) => {
-              console.log(`Processed chunk ${index + 1}/${chunks.length}`)
-              return result
-            })
-          )
-        )
-
-        const wordsToKeep: Set<string> = new Set(processedChunks.flat())
-        console.log('Words to keep:', wordsToKeep.size)
-
-        const filteredWordRatios = filterWords(wordRatios, wordsToKeep)
-
-        const topWords1 = filteredWordRatios
-          .filter((w) => w.ratio > 1)
-          .slice(0, 50)
-        const topWords2 = filteredWordRatios
-          .filter((w) => w.ratio <= 1)
-          .slice(-50)
-          .map((w) => ({ ...w, ratio: 1 / w.ratio }))
-
-        console.log(
-          'Final word counts - Person 1:',
-          topWords1.length,
-          'Person 2:',
-          topWords2.length
-        )
-        setFilteredWords({ topWords1, topWords2 })
+    const performAnalysis = useMemo(() => async () => {
+      console.log('Starting word cloud analysis')
+      const apiKey = process.env.REACT_APP_OPENAI_API_KEY
+      if (!apiKey) {
+        console.error('OpenAI API key is not defined')
+        return null
       }
 
-      performAnalysis()
+      const wordRatios: WordItem[] = [
+        ...analysisResult.topWords1,
+        ...analysisResult.topWords2,
+      ].map((word) => ({
+        ...word,
+        ratio:
+          (analysisResult.topWords1.find((w) => w.text === word.text)
+            ?.value || 0 + 1) /
+          (analysisResult.topWords2.find((w) => w.text === word.text)
+            ?.value || 0 + 1),
+      }))
+
+      const allWords = wordRatios.map((w) => w.text)
+      const chunks = createAdaptiveChunks(allWords)
+      console.log('Number of chunks:', chunks.length)
+
+      const processedChunks = await Promise.all(
+        chunks.map((chunk, index) =>
+          processChunk(chunk, apiKey).then((result) => {
+            console.log(`Processed chunk ${index + 1}/${chunks.length}`)
+            return result
+          })
+        )
+      )
+
+      const wordsToKeep: Set<string> = new Set(processedChunks.flat())
+      console.log('Words to keep:', wordsToKeep.size)
+
+      const filteredWordRatios = filterWords(wordRatios, wordsToKeep)
+
+      const topWords1 = filteredWordRatios
+        .filter((w) => w.ratio > 1)
+        .slice(0, 50)
+      const topWords2 = filteredWordRatios
+        .filter((w) => w.ratio <= 1)
+        .slice(-50)
+        .map((w) => ({ ...w, ratio: 1 / w.ratio }))
+
+      console.log(
+        'Final word counts - Person 1:',
+        topWords1.length,
+        'Person 2:',
+        topWords2.length
+      )
+      return { topWords1, topWords2 }
     }, [analysisResult, createAdaptiveChunks, processChunk, filterWords])
+
+    useEffect(() => {
+      performAnalysis().then((result) => {
+        if (result) {
+          setFilteredWords(result)
+        }
+      })
+    }, [performAnalysis])
 
     const normalizedWords = useMemo(() => {
       const normalizeSet = (words: WordItem[]): Word[] => {

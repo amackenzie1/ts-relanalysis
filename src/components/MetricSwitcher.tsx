@@ -256,22 +256,27 @@ const MetricSwitcher: React.FC<MetricSwitcherProps> = ({ chatData }) => {
   }, [chatData])
 
   const metrics = useMemo(() => {
-    if (filteredCommonMessages.length > 0) {
-      return [
-        `You spent ${calculateCallTimes.videoCallTime} Video Calling 🌚`,
-        `You spent ${calculateCallTimes.voiceCallTime} on the Phone 🥰`,
-        `You missed ${calculateCallTimes.missedCalls} Calls 😢 `,
-        `You said "${filteredCommonMessages[0][0]}" ${filteredCommonMessages[0][1]} times!!!🤯🎉 `,
-      ]
-    } else {
-      return [
-        `Total Video Call Time: ${calculateCallTimes.videoCallTime}`,
-        `Total Voice Call Time: ${calculateCallTimes.voiceCallTime}`,
-        `Missed Calls: ${calculateCallTimes.missedCalls}`,
-        'No common messages found',
-      ]
-    }
-  }, [filteredCommonMessages, calculateCallTimes])
+    const noVideoCalls = calculateCallTimes.videoCallTime === '';
+    const noVoiceCalls = calculateCallTimes.voiceCallTime === '';
+    const noMissedCalls = calculateCallTimes.missedCalls === 0;
+  
+    return [
+      noVideoCalls
+        ? 'No video calls were made during this period 😭😭'
+        : `You spent ${calculateCallTimes.videoCallTime} Video Calling 🌚💋 `,
+      noVoiceCalls
+        ? 'No voice calls were made during this period 😢😡'
+        : `You spent ${calculateCallTimes.voiceCallTime} on the Phone 🥰`,
+        filteredCommonMessages.length > 0
+        ? `You said "${filteredCommonMessages[0][0]}" ${filteredCommonMessages[0][1]} times!!!🤯🎉 `
+        : 'No common messages found (ugh, so sad)',
+      noMissedCalls
+        ? 'No calls were missed during this period 😌👍'
+        : `You missed ${calculateCallTimes.missedCalls} Calls 😡🤬`,
+     
+    ];
+  }, [filteredCommonMessages, calculateCallTimes]);
+  
 
   const [currentMetricIndex, setCurrentMetricIndex] = useState(0)
 
