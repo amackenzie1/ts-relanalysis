@@ -8,6 +8,7 @@ import WordCloudComponent from './components/WordCloudComponent'
 import WordCountChart from './components/WordCountChart'
 import { analyzeText } from './utils/textAnalysis'
 import { ChatMessage } from './utils/types'
+import MetricSwitcher from './components/MetricSwitcher'
 
 const App: React.FC = () => {
   const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null)
@@ -67,7 +68,7 @@ const App: React.FC = () => {
           />
         ) : (
           <>
-            {/* <MetricSwitcher chatData={parsedData} /> */}
+            <MetricSwitcher chatData={parsedData} />
             {analysisResult && (
               <WordCloudComponent
                 analysisResult={analysisResult}
