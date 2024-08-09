@@ -79,6 +79,7 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
       Secondly:
       Select the top 2 quotes from each user that are either completely unhinged or incredibly sweet and heartwarming. These should be specific to the users' dynamic.
       NOTE! The quotes are totally unrelated to the sentiment analysis subjects. Literally just find the craziest/funniest/stupidest/most attention-grabbing things these people said.
+      (No inventing stuff though. If there's not enough content just don't include any quotes.)
 
       Chat transcript:
       ${weekMessages.map((m) => `${m.user}: ${m.message}`).join('\n')}
@@ -284,7 +285,7 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
   return (
     <div
       className="sentiment-chart-container"
-      style={{ width: '100%', height: '400px' }}
+      style={{ width: '100%', height: '400px', paddingBottom: '80px' }}
     >
       <h2 className="text-2xl font-bold mb-4">Sentiment Analysis by Week</h2>
       <ResponsiveContainer width="100%" height="100%">

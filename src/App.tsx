@@ -76,9 +76,9 @@ const App: React.FC = () => {
                 color2="#28a745"
               />
             )}
-            <MBTIAnalysis parsedData={parsedData} />
-            <WordCountChart parsedData={parsedData} />
             <SentimentChart parsedData={parsedData} />
+            <WordCountChart parsedData={parsedData} />
+            <MBTIAnalysis parsedData={parsedData} />
             {/* Add the new component here */}
           </>
         )}
