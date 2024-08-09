@@ -1,7 +1,6 @@
-import { format } from 'date-fns'
+import { format, startOfWeek } from 'date-fns'
 import React, { useMemo } from 'react'
 import {
-  CartesianGrid,
   Legend,
   Line,
   LineChart,
@@ -17,50 +16,88 @@ interface WordCountChartProps {
 }
 
 const WordCountChart: React.FC<WordCountChartProps> = ({ parsedData }) => {
-  const chartData = useMemo(() => {
-    const counters: { [key: string]: { [key: string]: number } } = {}
-    const persons: Set<string> = new Set()
+  const { chartData, persons } = useMemo(() => {
+    const weeklyData: { [key: string]: { [key: string]: number } } = {}
+    const personSet: Set<string> = new Set()
 
     parsedData.forEach((message) => {
-      const monthYear = format(message.date, 'yyyy-MM')
+      const weekStart = format(startOfWeek(message.date), 'yyyy-MM-dd')
       const wordCount = message.message.split(/\s+/).length
+      personSet.add(message.user)
 
-      persons.add(message.user)
-
-      if (!counters[monthYear]) {
-        counters[monthYear] = {}
+      if (!weeklyData[weekStart]) {
+        weeklyData[weekStart] = {}
       }
-      counters[monthYear][message.user] =
-        (counters[monthYear][message.user] || 0) + wordCount
+      weeklyData[weekStart][message.user] =
+        (weeklyData[weekStart][message.user] || 0) + wordCount
     })
 
-    const sortedMonths = Object.keys(counters).sort()
-
-    const filledData = sortedMonths.map((monthYear) => {
-      const monthData: any = { monthYear }
-      persons.forEach((person) => {
-        monthData[person] = counters[monthYear][person] || 0
+    const sortedWeeks = Object.keys(weeklyData).sort()
+    const filledData = sortedWeeks.map((weekStart) => {
+      const weekData: any = { weekStart }
+      personSet.forEach((person) => {
+        weekData[person] = weeklyData[weekStart][person] || 0
       })
-      return monthData
+      return weekData
     })
 
-    return filledData
+    return { chartData: filledData, persons: Array.from(personSet) }
   }, [parsedData])
 
   if (chartData.length === 0) {
     return <div>No data available for the chart.</div>
   }
 
-  const persons = Object.keys(chartData[0]).filter((key) => key !== 'monthYear')
+  const [user1, user2] = persons
+  const user1Color = '#8884d8'
+  const user2Color = '#82ca9d'
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div
+          style={{
+            backgroundColor: 'white',
+            padding: '15px',
+            border: '1px solid #ccc',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            fontSize: '14px',
+          }}
+        >
+          <p
+            style={{
+              fontWeight: 'bold',
+              marginBottom: '10px',
+              fontSize: '16px',
+            }}
+          >
+            {`Week of ${format(new Date(label), 'MMM d, yyyy')}`}
+          </p>
+          <p
+            style={{ margin: '5px 0', color: user1Color }}
+          >{`${user1}: ${data[user1]} words`}</p>
+          <p
+            style={{ margin: '5px 0', color: user2Color }}
+          >{`${user2}: ${data[user2]} words`}</p>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <div
       className="word-count-chart-container"
-      style={{ width: '100%', height: '400px', paddingBottom: '80px' }}
+      style={{
+        width: '100%',
+        height: '400px',
+        paddingBottom: '80px',
+        color: 'black',
+      }}
     >
-      <h2 className="text-2xl font-bold mb-4">
-        Word Count Per Person by Month
-      </h2>
+      <h2 className="text-2xl font-bold mb-4">Engagement</h2>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
@@ -71,20 +108,31 @@ const WordCountChart: React.FC<WordCountChartProps> = ({ parsedData }) => {
             bottom: 5,
           }}
         >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="monthYear" />
-          <YAxis />
-          <Tooltip />
+          <XAxis
+            dataKey="weekStart"
+            stroke="black"
+            strokeWidth={2}
+            tick={{ fill: 'black' }}
+          />
+          <YAxis stroke="black" strokeWidth={2} tick={{ fill: 'black' }} />
+          <Tooltip content={<CustomTooltip />} />
           <Legend />
-          {persons.map((person, index) => (
-            <Line
-              key={person}
-              type="monotone"
-              dataKey={person}
-              stroke={index === 0 ? '#8884d8' : '#82ca9d'}
-              activeDot={{ r: 8 }}
-            />
-          ))}
+          <Line
+            type="monotone"
+            dataKey={user1}
+            name={user1}
+            stroke={user1Color}
+            activeDot={{ r: 8 }}
+            strokeWidth={2}
+          />
+          <Line
+            type="monotone"
+            dataKey={user2}
+            name={user2}
+            stroke={user2Color}
+            activeDot={{ r: 8 }}
+            strokeWidth={2}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

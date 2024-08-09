@@ -3,7 +3,6 @@ import { OpenAI } from 'openai'
 import { zodResponseFormat } from 'openai/helpers/zod'
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  CartesianGrid,
   Legend,
   Line,
   LineChart,
@@ -49,6 +48,37 @@ type SentimentResponseType = z.infer<typeof SentimentResponse>
 type FilteredQuotesResponseType = z.infer<typeof FilteredQuotesResponse>
 type QuoteType = z.infer<typeof Quote>
 
+const fuzzySubstringMatch = (
+  substring: string,
+  fullString: string,
+  threshold: number = 0.5
+): boolean => {
+  const words = substring.toLowerCase().split(/\s+/)
+  const fullStringLower = fullString.toLowerCase()
+
+  let matchedWords = 0
+  for (const word of words) {
+    if (fullStringLower.includes(word)) {
+      matchedWords++
+    }
+  }
+
+  return matchedWords / words.length >= threshold
+}
+
+const verifyQuotes = (
+  weekMessages: ChatMessage[],
+  quotes: QuoteType[]
+): QuoteType[] => {
+  return quotes.filter((quote) =>
+    weekMessages.some(
+      (message) =>
+        message.user === quote.user &&
+        fuzzySubstringMatch(quote.quote, message.message)
+    )
+  )
+}
+
 const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
   const [chartData, setChartData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -76,15 +106,15 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
   ): Promise<SentimentResponseType> => {
     const prompt = `
       Firstly:
+      Select at most 2 quotes from each user that are either completely unhinged or incredibly sweet and heartwarming. These should be specific to the users' dynamic.
+      NOTE! The quotes are totally unrelated to the sentiment analysis subjects. Literally just find the craziest/funniest/stupidest chats. As unique and creative and cute as possible, not just straight nsfw.
+      (No inventing stuff though. If there's not enough content just don't include any quotes.)
+      
+      Secondly:
       Rate the sentiment on a scale from -10 (extremely negative) to 10 (extremely positive).
       Also, identify important [influencing the sentiment] events or topics from the conversation, and rate their salience on a scale from 0 to 10. 0 is completely irrelevant, 10 is a dramatic life change, like getting married, 5 is like a party.
       Aim to include events with a salience of 5 or higher. This might be a completely different number of events depending on the week.
       Finally, note that this is targeted at the users themselves, so assume they have all the context and make your responses match their style. Basically they just need to be reminded of what happened. You're talking to them directly. Be casual. 
-      
-      Secondly:
-      Select at most 2 quotes from each user that are either completely unhinged or incredibly sweet and heartwarming. These should be specific to the users' dynamic.
-      NOTE! The quotes are totally unrelated to the sentiment analysis subjects. Literally just find the craziest/funniest/stupidest/most attention-grabbing things these people said. As unique and creative as possible, not just straight nsfw.
-      (No inventing stuff though. If there's not enough content just don't include any quotes.)
 
       Chat transcript:
       ${weekMessages.map((m) => `${m.user}: ${m.message}`).join('\n')}
@@ -137,51 +167,6 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
     return message.parsed
   }
 
-  const filterQuotes = async (
-    quotes: QuoteType[]
-  ): Promise<FilteredQuotesResponseType> => {
-    const prompt = `
-    Find the craziest/funniest/stupidest/most heartwarming/most attention-grabbing things these people said. As unique and creative as possible, not just straight nsfw. At least 1 quote per user.
-      Quotes:
-      ${quotes.map((q) => `${q.user}: "${q.quote}"`).join('\n')}
-
-      Provide your answer in the following JSON format:
-      {
-        "filtered_quotes": [
-          {
-            "user": "user1 or user2 (the actual username)",
-            "quote": "The actual quote",
-          },
-          ... (4 quotes total)
-        ]
-      }
-    `
-
-    const response = await client.beta.chat.completions.parse({
-      model: 'gpt-4o-2024-08-06',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a helpful assistant that selects the most interesting quotes.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      response_format: zodResponseFormat(
-        FilteredQuotesResponse,
-        'filteredQuotesResponse'
-      ),
-      temperature: 0,
-    })
-
-    const message = response.choices[0]?.message
-    if (!message?.parsed) {
-      throw new Error('Unexpected response from OpenAI API')
-    }
-
-    return message.parsed
-  }
-
   useEffect(() => {
     const fetchSentiments = async () => {
       setLoading(true)
@@ -199,12 +184,12 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
               return null
             }
             const sentiment = await getSentiment(messages, weeklyData.persons)
-            // const filteredQuotes = await filterQuotes(sentiment.top_quotes)
+            const verifiedQuotes = verifyQuotes(messages, sentiment.top_quotes)
             return {
               weekStart,
               messageCount: messages.length,
               ...sentiment,
-              top_quotes: sentiment.top_quotes,
+              top_quotes: verifiedQuotes,
             }
           }
         )
@@ -344,9 +329,14 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
   return (
     <div
       className="sentiment-chart-container"
-      style={{ width: '100%', height: '400px', paddingBottom: '80px' }}
+      style={{
+        width: '100%',
+        height: '400px',
+        paddingBottom: '80px',
+        color: 'black',
+      }}
     >
-      <h2 className="text-2xl font-bold mb-4">Sentiment Analysis by Week</h2>
+      <h2 className="text-2xl font-bold mb-4">Sentiment Analysis</h2>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={chartData}
@@ -357,9 +347,23 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
             bottom: 5,
           }}
         >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="weekStart" />
-          <YAxis domain={[-10, 10]} />
+          {/* <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="black"
+            strokeWidth={1.5}
+          /> */}
+          <XAxis
+            dataKey="weekStart"
+            stroke="black"
+            strokeWidth={2}
+            tick={{ fill: 'black' }}
+          />
+          <YAxis
+            domain={[-10, 10]}
+            stroke="black"
+            strokeWidth={2}
+            tick={{ fill: 'black' }}
+          />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
           <Line
@@ -368,6 +372,7 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
             name={user1}
             stroke={user1Color}
             activeDot={{ r: 8 }}
+            strokeWidth={2}
           />
           <Line
             type="monotone"
@@ -375,6 +380,7 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
             name={user2}
             stroke={user2Color}
             activeDot={{ r: 8 }}
+            strokeWidth={2}
           />
         </LineChart>
       </ResponsiveContainer>

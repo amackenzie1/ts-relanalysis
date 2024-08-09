@@ -1,14 +1,13 @@
 import React, { useMemo, useState } from 'react'
 import BubbleBackground from './components/BubbleBackground'
 import FileUploadAndParse from './components/FileUploadAndParse'
-import MBTIAnalysis from './components/MBTIAnalysis'
-import MetricSwitcher from './components/MetricSwitcher'
 import SentimentChart from './components/SentimentChart'
 import Title from './components/Title'
 import WordCloudComponent from './components/WordCloudComponent'
 import WordCountChart from './components/WordCountChart'
 import { analyzeText } from './utils/textAnalysis'
 import { ChatMessage } from './utils/types'
+import MBTIAnalysis from './components/MBTIAnalysis'
 
 const App: React.FC = () => {
   const [parsedData, setParsedData] = useState<ChatMessage[] | null>(null)
@@ -57,7 +56,7 @@ const App: React.FC = () => {
   return (
     <>
       {parsedData !== null && <BubbleBackground />}
-      <div style={{ padding: '10px' }}>
+      <div style={{ padding: '10px', fontFamily: "'Comfortaa', sans-serif" }}>
         <Title />
         {parsedData === null ? (
           <FileUploadAndParse
@@ -68,7 +67,7 @@ const App: React.FC = () => {
           />
         ) : (
           <>
-            <MetricSwitcher chatData={parsedData} />
+            {/* <MetricSwitcher chatData={parsedData} /> */}
             {analysisResult && (
               <WordCloudComponent
                 analysisResult={analysisResult}

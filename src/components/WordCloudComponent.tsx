@@ -121,10 +121,10 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
 
         const topWords1 = filteredWordRatios
           .filter((w) => w.ratio > 1)
-          .slice(0, 50)
+          .slice(0, 100)
         const topWords2 = filteredWordRatios
           .filter((w) => w.ratio <= 1)
-          .slice(-50)
+          .slice(-100)
           .map((w) => ({ ...w, ratio: 1 / w.ratio }))
 
         console.log(
@@ -160,6 +160,16 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
       return Math.sqrt(word.value) * 80 + 16
     }, [])
 
+    const colorMapper = useCallback(
+      (word: Word, index: number, person: string) => {
+        const colors = ['#3B82F6', '#00C4FF', '#60A5FA']
+        // add some green
+        colors.push('#82ca9d')
+        return colors[index % colors.length]
+      },
+      [color1, color2, analysisResult.person1]
+    )
+
     return (
       <div
         style={{
@@ -180,8 +190,8 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
             color: color2,
           },
         ].map(({ person, words, color }) => (
-          <div key={person} style={{ minWidth: '48%', margin: '10px' }}>
-            <h3 style={{ textAlign: 'center', color: '#555' }}>
+          <div key={person} style={{ minWidth: '45%', margin: '30px' }}>
+            <h3 style={{ textAlign: 'center', color: 'black' }}>
               {person}'s Top Words
             </h3>
             <div
@@ -191,6 +201,7 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
                 borderRadius: '8px',
                 padding: '2px',
                 boxSizing: 'border-box',
+                backgroundColor: 'black',
               }}
             >
               <WordCloud
@@ -198,6 +209,9 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
                 fontSize={fontSizeMapper}
                 rotate={0}
                 padding={2}
+                fill={(word: Word, index: number) =>
+                  colorMapper(word, index, person)
+                }
               />
             </div>
           </div>
