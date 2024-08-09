@@ -3,6 +3,7 @@ import FileUploadAndParse from './components/FileUploadAndParse';
 import WordCloudComponent from './components/WordCloudComponent';
 import MBTIAnalysis from './components/MBTIAnalysis';
 import BubbleBackground from './components/BubbleBackground';
+import WordCountChart from './components/WordCountChart' 
 import Title from './components/Title';
 import { analyzeText } from './utils/textAnalysis';
 import { ChatMessage } from './utils/types';
@@ -72,21 +73,13 @@ const App: React.FC = () => {
                 color2="#28a745"
               />
             )}
-            <div className="mbti-analysis-wrapper" style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: '20px',
-              padding: '20px',
-              backgroundColor: 'rgba(192, 192, 192, 0.6)', // More transparent silvery background
-              borderRadius: '10px',
-            }}>
-              <MBTIAnalysis parsedData={parsedData} />
-            </div>
+            <MBTIAnalysis parsedData={parsedData} />
+            <WordCountChart parsedData={parsedData} />  {/* Add the new component here */}
           </>
         )}
       </div>
     </>
-  );
+  )
 }
 
 const styles = `
@@ -109,7 +102,7 @@ const styles = `
   .mbti-analysis-wrapper {
     display: flex;
     justify-content: space-between;
-    width: 100%;
+    width: 45%;
     background-color: rgba(192, 192, 192, 0.6); // More transparent silvery background
     border-radius: 10px;
   }

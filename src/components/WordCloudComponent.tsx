@@ -23,7 +23,6 @@ interface WordItem extends Word {
   ratio: number;
 }
 
-
 const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
   ({ analysisResult, color1, color2 }) => {
     const [filteredWords, setFilteredWords] = useState<{
@@ -52,8 +51,9 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
     const processChunks = useCallback(async (chunks: WordItem[][], apiKey: string): Promise<WordItem[]> => {
       const chunkResults = await Promise.all(chunks.map(async (chunk, index) => {
         const prompt = createPrompt(chunk);
+        console.log(`Chunk ${index + 1}/${chunks.length} - Original words:`, chunk);
+
         try {
-          console.log(`Processing chunk ${index + 1}/${chunks.length}`);
           const response = await axios.post('https://api.openai.com/v1/chat/completions', {
             model: "gpt-4o-mini",
             messages: [{ role: "user", content: prompt }],
@@ -67,7 +67,12 @@ const WordCloudComponent: React.FC<WordCloudComponentProps> = React.memo(
 
           const cleanedContent = cleanJSONResponse(response.data.choices[0].message.content);
           const parsedResult = JSON.parse(cleanedContent);
-          console.log(`Chunk ${index + 1} processed successfully`);
+          console.log(`Chunk ${index + 1} - Filtered words:`, parsedResult);
+
+          // Log the words that were filtered out
+          const filteredOutWords = chunk.filter(w => !parsedResult.some((fw: WordItem) => fw.text === w.text));
+          console.log(`Chunk ${index + 1} - Filtered out words:`, filteredOutWords);
+
           return parsedResult;
         } catch (error) {
           console.error(`Error processing chunk ${index + 1}:`, error);
