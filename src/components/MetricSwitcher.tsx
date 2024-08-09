@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ChatMessage } from '../utils/types'
-
+import './MetricSwitcher.css'
 interface MetricSwitcherProps {
   chatData: ChatMessage[]
 }

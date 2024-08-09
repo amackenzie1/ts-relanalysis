@@ -1,4 +1,4 @@
-import React from 'react';
+import { text } from "stream/consumers";
 
 const Title = () => {
   return (
@@ -22,5 +22,8 @@ const Title = () => {
     </div>
   );
 };
+
+
+
 
 export default Title;
