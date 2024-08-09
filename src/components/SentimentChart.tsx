@@ -32,7 +32,6 @@ const SalientEvent = z.object({
 const Quote = z.object({
   user: z.string(),
   quote: z.string(),
-  type: z.string(),
 })
 
 const SentimentResponse = z.object({
@@ -42,7 +41,13 @@ const SentimentResponse = z.object({
   top_quotes: z.array(Quote),
 })
 
+const FilteredQuotesResponse = z.object({
+  filtered_quotes: z.array(Quote),
+})
+
 type SentimentResponseType = z.infer<typeof SentimentResponse>
+type FilteredQuotesResponseType = z.infer<typeof FilteredQuotesResponse>
+type QuoteType = z.infer<typeof Quote>
 
 const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
   const [chartData, setChartData] = useState<any[]>([])
@@ -77,8 +82,8 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
       Finally, note that this is targeted at the users themselves, so assume they have all the context and make your responses match their style. Basically they just need to be reminded of what happened. You're talking to them directly. Be casual. 
       
       Secondly:
-      Select the top 2 quotes from each user that are either completely unhinged or incredibly sweet and heartwarming. These should be specific to the users' dynamic.
-      NOTE! The quotes are totally unrelated to the sentiment analysis subjects. Literally just find the craziest/funniest/stupidest/most attention-grabbing things these people said.
+      Select at most 2 quotes from each user that are either completely unhinged or incredibly sweet and heartwarming. These should be specific to the users' dynamic.
+      NOTE! The quotes are totally unrelated to the sentiment analysis subjects. Literally just find the craziest/funniest/stupidest/most attention-grabbing things these people said. As unique and creative as possible, not just straight nsfw.
       (No inventing stuff though. If there's not enough content just don't include any quotes.)
 
       Chat transcript:
@@ -97,7 +102,7 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
         ],
         "top_quotes": [
           {
-            "user": "user1 or user2",
+            "user": "user1 or user2 (the actual username)",
             "quote": "The actual quote",
           },
           ... (4 quotes total, 2 for each user)
@@ -123,10 +128,58 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
     })
 
     const message = response.choices[0]?.message
-    if (message?.parsed) {
-      return message.parsed
+    if (!message?.parsed) {
+      throw new Error('Unexpected response from OpenAI API')
     }
-    throw new Error('Unexpected response from OpenAI API')
+
+    // filter the quotes here
+
+    return message.parsed
+  }
+
+  const filterQuotes = async (
+    quotes: QuoteType[]
+  ): Promise<FilteredQuotesResponseType> => {
+    const prompt = `
+    Find the craziest/funniest/stupidest/most heartwarming/most attention-grabbing things these people said. As unique and creative as possible, not just straight nsfw. At least 1 quote per user.
+      Quotes:
+      ${quotes.map((q) => `${q.user}: "${q.quote}"`).join('\n')}
+
+      Provide your answer in the following JSON format:
+      {
+        "filtered_quotes": [
+          {
+            "user": "user1 or user2 (the actual username)",
+            "quote": "The actual quote",
+          },
+          ... (4 quotes total)
+        ]
+      }
+    `
+
+    const response = await client.beta.chat.completions.parse({
+      model: 'gpt-4o-2024-08-06',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are a helpful assistant that selects the most interesting quotes.',
+        },
+        { role: 'user', content: prompt },
+      ],
+      response_format: zodResponseFormat(
+        FilteredQuotesResponse,
+        'filteredQuotesResponse'
+      ),
+      temperature: 0,
+    })
+
+    const message = response.choices[0]?.message
+    if (!message?.parsed) {
+      throw new Error('Unexpected response from OpenAI API')
+    }
+
+    return message.parsed
   }
 
   useEffect(() => {
@@ -146,7 +199,13 @@ const SentimentChart: React.FC<SentimentChartProps> = ({ parsedData }) => {
               return null
             }
             const sentiment = await getSentiment(messages, weeklyData.persons)
-            return { weekStart, messageCount: messages.length, ...sentiment }
+            // const filteredQuotes = await filterQuotes(sentiment.top_quotes)
+            return {
+              weekStart,
+              messageCount: messages.length,
+              ...sentiment,
+              top_quotes: sentiment.top_quotes,
+            }
           }
         )
 
